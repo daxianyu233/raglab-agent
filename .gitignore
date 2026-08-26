@@ -65,6 +65,8 @@ raglab_e2e_data_inventory.md
 
 # Accidental legacy copy retained locally
 .../
+.docker-build-context/
+.docker-build-context.tar
 
 # Windows
 Thumbs.db

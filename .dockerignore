@@ -21,6 +21,8 @@ data/intelligence/**
 cleanup-*.ps1
 scripts/bridge_cli.py
 .../
+.docker-build-context/
+.docker-build-context.tar
 scripts/_*.py
 scripts/build_interview_guide.py
 scripts/docx2pdf.py

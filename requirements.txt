@@ -18,7 +18,8 @@ langchain-huggingface>=1.2,<2
 chromadb>=1.5,<2
 sentence-transformers>=5.6,<6
 transformers>=5.14,<6
-torch>=2.13,<3
+# torch is a transitive requirement of sentence-transformers. Docker installs
+# its CPU-only wheel explicitly before processing this file.
 rank-bm25>=0.2.2,<0.3
 jieba>=0.42,<0.43
 pypdf>=6.14,<7

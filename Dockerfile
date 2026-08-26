@@ -13,7 +13,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt ./
+# Install the CPU-only wheel first. Otherwise PyPI's Linux torch package
+# pulls the full CUDA toolkit into an API container that does not use it.
 RUN python -m pip install --upgrade pip \
+    && python -m pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.13.0+cpu" \
     && python -m pip install -r requirements.txt
 
 COPY . .
