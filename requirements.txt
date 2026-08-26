@@ -1,0 +1,34 @@
+# Web API
+fastapi>=0.141,<0.142
+uvicorn[standard]>=0.51,<0.52
+pydantic>=2.13,<3
+
+# Agent runtime and model integration
+langchain>=1.3,<2
+langchain-core>=1.5,<2
+langchain-openai>=1.4,<2
+langchain-community>=0.4,<0.5
+langchain-text-splitters>=1.1,<2
+langgraph>=1.2,<2
+langgraph-checkpoint-sqlite>=3.1,<4
+
+# Retrieval
+langchain-chroma>=1.1,<2
+langchain-huggingface>=1.2,<2
+chromadb>=1.5,<2
+sentence-transformers>=5.6,<6
+transformers>=5.14,<6
+torch>=2.13,<3
+rank-bm25>=0.2.2,<0.3
+jieba>=0.42,<0.43
+pypdf>=6.14,<7
+
+# GitHub intelligence and configuration
+requests>=2.34,<3
+beautifulsoup4>=4.15,<5
+PyYAML>=6.0,<7
+tzdata>=2026.3
+
+# Test client
+httpx>=0.28,<0.29
+pytest>=9.1,<10

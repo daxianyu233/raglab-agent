@@ -1,0 +1,25 @@
+services:
+  raglab-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: raglab-agent:local
+    ports:
+      - "8765:8765"
+    environment:
+      DEEPSEEK_API_KEY: "${DEEPSEEK_API_KEY:?Set DEEPSEEK_API_KEY in your shell or .env file}"
+      GITHUB_TOKEN: "${GITHUB_TOKEN:-}"
+      DEEPSEEK_BASE_URL: "${DEEPSEEK_BASE_URL:-https://api.deepseek.com}"
+      DEEPSEEK_MODEL: "${DEEPSEEK_MODEL:-deepseek-v4-flash}"
+    volumes:
+      - raglab-storage:/app/storage
+      - raglab-reports:/app/reports
+      - raglab-intelligence:/app/data/intelligence
+      - raglab-model-cache:/home/raglab/.cache
+    restart: unless-stopped
+
+volumes:
+  raglab-storage:
+  raglab-reports:
+  raglab-intelligence:
+  raglab-model-cache:

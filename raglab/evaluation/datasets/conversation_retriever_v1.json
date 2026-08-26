@@ -1,0 +1,434 @@
+{
+  "version": "1.0",
+  "recent_turn_limit": 3,
+  "historical_turn_limit": 3,
+  "current_turn_id": "t31",
+  "corpus_turns": [
+    {
+      "turn_id": "t01",
+      "human": "GitHub 技术情报采集链路最开始怎么设计？",
+      "assistant": "采用 Trending 与 Repository Search 采集仓库，并串联详情抓取、更新检测、结构化分析和日报生成。"
+    },
+    {
+      "turn_id": "t02",
+      "human": "BM25 的第一轮检索评测结果怎么样？",
+      "assistant": "记录 Hit@5、Recall@5 和 MRR@5，用来衡量关键词检索质量。"
+    },
+    {
+      "turn_id": "t03",
+      "human": "Dense Retrieval 这部分用什么？",
+      "assistant": "使用 BGE Embedding 构建 Chroma 向量索引，负责语义召回。"
+    },
+    {
+      "turn_id": "t04",
+      "human": "BM25 和 Dense 结果怎么融合？",
+      "assistant": "使用 Reciprocal Rank Fusion，也就是 RRF，对多路候选排名进行融合。"
+    },
+    {
+      "turn_id": "t05",
+      "human": "融合后还需要二次排序吗？",
+      "assistant": "使用 Cross-Encoder Reranker 对候选进行二次重排序，提高最终 Top-K 相关性。"
+    },
+    {
+      "turn_id": "t06",
+      "human": "Scheduler 错过计划时间怎么处理？",
+      "assistant": "加入 Misfire Catch-up，让错过的定时任务可以补执行。"
+    },
+    {
+      "turn_id": "t07",
+      "human": "怎么避免同一个 GitHub 更新任务重复运行？",
+      "assistant": "通过 Single-Flight 和 Job Run 状态互斥；重复运行标记为 SKIPPED_DUPLICATE。"
+    },
+    {
+      "turn_id": "t08",
+      "human": "高风险 Tool 怎么治理？",
+      "assistant": "高风险操作触发 HITL，中断 Agent，等待用户 Approve 或 Reject 后再继续。"
+    },
+    {
+      "turn_id": "t09",
+      "human": "Tool Policy 默认应该放行还是拒绝？",
+      "assistant": "采用 Fail-Closed 策略；没有明确授权的高风险执行默认不放行。"
+    },
+    {
+      "turn_id": "t10",
+      "human": "LangGraph 多轮状态怎么恢复？",
+      "assistant": "使用 thread_id 与 Checkpointer 保存 Graph 状态，支持多轮延续和中断恢复。"
+    },
+    {
+      "turn_id": "t11",
+      "human": "跨线程的用户偏好应该放哪里？",
+      "assistant": "放到长期记忆中，需要时再按用户和查询加载，而不是每轮都注入。"
+    },
+    {
+      "turn_id": "t12",
+      "human": "新的 Context Planner 负责什么？",
+      "assistant": "先判断当前请求是否依赖历史，再决定 previous、recent、historical search、外部检索和长期记忆需求。"
+    },
+    {
+      "turn_id": "t13",
+      "human": "完整历史为什么还要单独保存？",
+      "assistant": "Conversation Event Store 长期保存 Human、AI、Tool 原始事件，避免摘要或 Checkpoint 清理造成信息丢失。"
+    },
+    {
+      "turn_id": "t14",
+      "human": "更早历史现在怎么搜索？",
+      "assistant": "Conversation Retriever 当前使用 lexical coverage，对英文 token、中文连续串和中文 2-gram 进行匹配打分。"
+    },
+    {
+      "turn_id": "t15",
+      "human": "Context Assembler 是干什么的？",
+      "assistant": "把 System、Skill、长期记忆、摘要、检索出的历史和当前轮按顺序装配成模型输入。"
+    },
+    {
+      "turn_id": "t16",
+      "human": "怎么保证上下文不会超过模型容量？",
+      "assistant": "Token Budget 会预留输出 Token、Tool Schema 和安全余量，再计算可用于消息的上下文容量。"
+    },
+    {
+      "turn_id": "t17",
+      "human": "单次模型请求太大时怎么压缩？",
+      "assistant": "Context Compression 只压当前 Model Context View，例如历史 Tool Result 或低优先级历史，不修改 Event Store 和 Checkpoint。"
+    },
+    {
+      "turn_id": "t18",
+      "human": "为什么还要限制 Tool Schema？",
+      "assistant": "根据本轮任务只暴露允许使用的工具 Schema，减少无关 Tool Token，也降低误调用概率。"
+    },
+    {
+      "turn_id": "t19",
+      "human": "Checkpoint 里的历史消息什么时候整理？",
+      "assistant": "Working Memory 按实际 Token 压力触发整理，将安全的旧 Turn 写入线程摘要后从 Checkpoint 移出。"
+    },
+    {
+      "turn_id": "t20",
+      "human": "历史消息如果漏写 Event Store 怎么办？",
+      "assistant": "Archive Reconciliation 会从 Checkpoint 幂等补归档；仍无法验证的 Turn 会保留并等待后续恢复。"
+    },
+    {
+      "turn_id": "t21",
+      "human": "以后怎么把 Agent 提供给外部应用调用？",
+      "assistant": "计划通过 FastAPI 暴露 HTTP API，把 Agent Runtime 服务化。"
+    },
+    {
+      "turn_id": "t22",
+      "human": "部署阶段准备怎么做？",
+      "assistant": "后续加入 Docker，统一运行环境和依赖。"
+    },
+    {
+      "turn_id": "t23",
+      "human": "上线后怎么知道 Agent 哪里出问题？",
+      "assistant": "后续增加 Observability，记录调用链、Token、延迟、错误和关键状态指标。"
+    },
+    {
+      "turn_id": "t24",
+      "human": "动态 Skill 怎么发现？",
+      "assistant": "Agent 可以先列出 Skill，再按需加载，不需要把所有 Skill 指令永久塞入上下文。",
+      "tool_name": "list_skills",
+      "tool_result": "github-intelligence-update, repository-analysis"
+    },
+    {
+      "turn_id": "t25",
+      "human": "single flight 这个英语在航班场景是什么意思？",
+      "assistant": "在普通英语语境里可以表示单个航班，这里不是任务互斥机制。"
+    },
+    {
+      "turn_id": "t26",
+      "human": "RRF 还有什么优点？",
+      "assistant": "Reciprocal Rank Fusion 不要求不同检索器分数处在同一量纲，适合融合 BM25 与 Dense 排名。"
+    },
+    {
+      "turn_id": "t27",
+      "human": "BM25 后续还要观察什么指标？",
+      "assistant": "继续观察 Hit@K、Recall@K、MRR，并分析不可回答问题的 Top-1 score。"
+    },
+    {
+      "turn_id": "t28",
+      "human": "线程摘要和长期记忆有什么区别？",
+      "assistant": "线程摘要描述当前线程进展；长期记忆保存跨线程仍有价值的用户事实和偏好。"
+    },
+    {
+      "turn_id": "t29",
+      "human": "今天的 GitHub 技术日报从哪里取？",
+      "assistant": "从已有 GitHub 技术情报检索结果和每日简报中读取。",
+      "tool_name": "search_github_intelligence",
+      "tool_result": "daily brief: agent runtime, memory, retrieval"
+    },
+    {
+      "turn_id": "t30",
+      "human": "GitHub Intelligence 的结构化统计怎么查？",
+      "assistant": "通过 Text-to-SQL 生成受控 SQL，再查询结构化技术情报数据库。",
+      "tool_name": "query_github_intelligence_sql",
+      "tool_result": "rows: 5; latest repositories returned"
+    },
+    {
+      "turn_id": "t31",
+      "human": "CURRONLY_X9Z7：现在开始做 Conversation Retriever 的评测。",
+      "assistant": "CURRONLY_X9Z7 只属于当前轮，用于验证 current_turn 排除。"
+    }
+  ],
+  "historical_cases": [
+    {
+      "case_id": "hist_exact_001",
+      "category": "exact_entity",
+      "query": "Single-Flight SKIPPED_DUPLICATE",
+      "relevant_turn_ids": [
+        "t07"
+      ]
+    },
+    {
+      "case_id": "hist_exact_002",
+      "category": "exact_entity",
+      "query": "HITL Approve Reject",
+      "relevant_turn_ids": [
+        "t08"
+      ]
+    },
+    {
+      "case_id": "hist_exact_003",
+      "category": "exact_entity",
+      "query": "Fail-Closed Tool Policy",
+      "relevant_turn_ids": [
+        "t09"
+      ]
+    },
+    {
+      "case_id": "hist_exact_004",
+      "category": "exact_entity",
+      "query": "Context Assembler",
+      "relevant_turn_ids": [
+        "t15"
+      ]
+    },
+    {
+      "case_id": "hist_exact_005",
+      "category": "exact_entity",
+      "query": "Archive Reconciliation",
+      "relevant_turn_ids": [
+        "t20"
+      ]
+    },
+    {
+      "case_id": "hist_para_001",
+      "category": "paraphrase",
+      "query": "把完整的原始聊天长期留档，避免摘要后找不回来",
+      "relevant_turn_ids": [
+        "t13"
+      ]
+    },
+    {
+      "case_id": "hist_para_002",
+      "category": "paraphrase",
+      "query": "在调用模型前先算还能塞多少消息，并给输出和工具定义留空间",
+      "relevant_turn_ids": [
+        "t16"
+      ]
+    },
+    {
+      "case_id": "hist_para_003",
+      "category": "paraphrase",
+      "query": "只缩小这一次发给模型的上下文，不改持久化历史",
+      "relevant_turn_ids": [
+        "t17"
+      ]
+    },
+    {
+      "case_id": "hist_para_004",
+      "category": "paraphrase",
+      "query": "上一轮历史漏保存以后自动从现有状态补写回来",
+      "relevant_turn_ids": [
+        "t20"
+      ]
+    },
+    {
+      "case_id": "hist_para_005",
+      "category": "paraphrase",
+      "query": "根据当前任务减少模型能看到的工具定义",
+      "relevant_turn_ids": [
+        "t18"
+      ]
+    },
+    {
+      "case_id": "hist_para_006",
+      "category": "paraphrase",
+      "query": "把 Agent 封装成 HTTP 接口给别的程序调用",
+      "relevant_turn_ids": [
+        "t21"
+      ]
+    },
+    {
+      "case_id": "hist_dist_001",
+      "category": "distractor",
+      "query": "我们之前说的任务互斥 Single-Flight 是怎么避免重复执行的？",
+      "relevant_turn_ids": [
+        "t07"
+      ]
+    },
+    {
+      "case_id": "hist_dist_002",
+      "category": "distractor",
+      "query": "跨线程保存用户偏好的 memory 方案",
+      "relevant_turn_ids": [
+        "t11"
+      ]
+    },
+    {
+      "case_id": "hist_dist_003",
+      "category": "distractor",
+      "query": "模型工具 schema 按任务裁剪",
+      "relevant_turn_ids": [
+        "t18"
+      ]
+    },
+    {
+      "case_id": "hist_dist_004",
+      "category": "distractor",
+      "query": "GitHub 语义检索使用的向量索引",
+      "relevant_turn_ids": [
+        "t03"
+      ]
+    },
+    {
+      "case_id": "hist_multi_001",
+      "category": "multi_relevant",
+      "query": "RRF 融合检索",
+      "relevant_turn_ids": [
+        "t04",
+        "t26"
+      ]
+    },
+    {
+      "case_id": "hist_multi_002",
+      "category": "multi_relevant",
+      "query": "BM25 检索评测指标",
+      "relevant_turn_ids": [
+        "t02",
+        "t27"
+      ]
+    },
+    {
+      "case_id": "hist_multi_003",
+      "category": "multi_relevant",
+      "query": "GitHub Intelligence 查询技术情报",
+      "relevant_turn_ids": [
+        "t29",
+        "t30"
+      ]
+    },
+    {
+      "case_id": "hist_tool_001",
+      "category": "tool_aware",
+      "query": "query_github_intelligence_sql",
+      "relevant_turn_ids": [
+        "t30"
+      ]
+    },
+    {
+      "case_id": "hist_tool_002",
+      "category": "tool_aware",
+      "query": "search_github_intelligence",
+      "relevant_turn_ids": [
+        "t29"
+      ]
+    },
+    {
+      "case_id": "hist_tool_003",
+      "category": "tool_aware",
+      "query": "list_skills",
+      "relevant_turn_ids": [
+        "t24"
+      ]
+    },
+    {
+      "case_id": "hist_mix_001",
+      "category": "conceptual",
+      "query": "checkpoint token pressure 清理旧消息",
+      "relevant_turn_ids": [
+        "t19"
+      ]
+    },
+    {
+      "case_id": "hist_mix_002",
+      "category": "conceptual",
+      "query": "conversation history lexical 2-gram",
+      "relevant_turn_ids": [
+        "t14"
+      ]
+    },
+    {
+      "case_id": "hist_mix_003",
+      "category": "conceptual",
+      "query": "current request 是否依赖之前聊天，由谁先判断",
+      "relevant_turn_ids": [
+        "t12"
+      ]
+    }
+  ],
+  "scope_cases": [
+    {
+      "case_id": "scope_001",
+      "category": "none",
+      "history_scope": "none",
+      "expected_turn_ids": []
+    },
+    {
+      "case_id": "scope_002",
+      "category": "previous_turn",
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "expected_turn_ids": [
+        "t30"
+      ],
+      "expected_event_signatures": [
+        "human",
+        "assistant_final"
+      ]
+    },
+    {
+      "case_id": "scope_003",
+      "category": "previous_raw_tool",
+      "history_scope": "previous_turn",
+      "raw_tool_evidence_required": true,
+      "expected_turn_ids": [
+        "t30"
+      ],
+      "expected_event_signatures": [
+        "human",
+        "assistant_tool_call",
+        "tool"
+      ]
+    },
+    {
+      "case_id": "scope_004",
+      "category": "previous_both",
+      "history_scope": "previous_turn",
+      "raw_tool_evidence_required": true,
+      "previous_answer_required": true,
+      "expected_turn_ids": [
+        "t30"
+      ],
+      "expected_event_signatures": [
+        "human",
+        "assistant_tool_call",
+        "tool",
+        "assistant_final"
+      ]
+    },
+    {
+      "case_id": "scope_005",
+      "category": "recent_turns",
+      "history_scope": "recent_turns",
+      "expected_turn_ids": [
+        "t28",
+        "t29",
+        "t30"
+      ]
+    },
+    {
+      "case_id": "scope_006",
+      "category": "current_turn_exclusion",
+      "history_scope": "historical_search",
+      "history_query": "CURRONLY_X9Z7",
+      "expected_turn_ids": []
+    }
+  ]
+}

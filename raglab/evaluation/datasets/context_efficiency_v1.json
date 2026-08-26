@@ -1,0 +1,19 @@
+{
+  "version": "1.0",
+  "description": "Deterministic message-side context efficiency benchmark; no LLM/API call.",
+  "selection_cases": [
+    {"case_id":"sel_none","category":"no_history","selected_turns":[],"selection_modes":{},"expected_required_turns":[]},
+    {"case_id":"sel_previous","category":"previous_turn","selected_turns":["t10"],"selection_modes":{"t10":"answer"},"expected_required_turns":["t10"]},
+    {"case_id":"sel_recent","category":"recent_turns","selected_turns":["t08","t09","t10"],"selection_modes":{"t08":"answer","t09":"answer","t10":"answer"},"expected_required_turns":["t08","t09","t10"]},
+    {"case_id":"sel_historical","category":"historical_search","selected_turns":["t03"],"selection_modes":{"t03":"answer"},"expected_required_turns":["t03"]},
+    {"case_id":"sel_raw_evidence","category":"raw_tool_evidence","selected_turns":["t05"],"selection_modes":{"t05":"raw"},"expected_required_turns":["t05"]}
+  ],
+  "compression_cases": [
+    {"case_id":"comp_history_tool","category":"historical_tool_result","scenario":"historical_tool","model_context_limit_tokens":4096,"reserved_output_tokens":512,"safety_margin_tokens":256,"expected_outcome":"fit","required_turns_after":["toolhist"]},
+    {"case_id":"comp_drop_history","category":"drop_low_priority_turn","scenario":"multi_history","model_context_limit_tokens":3600,"reserved_output_tokens":512,"safety_margin_tokens":256,"expected_outcome":"fit","required_turns_after":["relevant"]},
+    {"case_id":"comp_current_tool","category":"current_tool_result","scenario":"current_tool","model_context_limit_tokens":4096,"reserved_output_tokens":512,"safety_margin_tokens":256,"expected_outcome":"fit","required_turns_after":[]},
+    {"case_id":"comp_summary","category":"thread_summary","scenario":"thread_summary","model_context_limit_tokens":3000,"reserved_output_tokens":512,"safety_margin_tokens":256,"expected_outcome":"fit","required_turns_after":[]},
+    {"case_id":"comp_ltm","category":"long_term_memory","scenario":"long_term_memory","model_context_limit_tokens":3000,"reserved_output_tokens":512,"safety_margin_tokens":256,"expected_outcome":"fit","required_turns_after":[]},
+    {"case_id":"comp_fail_closed","category":"protected_current_human","scenario":"impossible_current_human","model_context_limit_tokens":2500,"reserved_output_tokens":512,"safety_margin_tokens":256,"expected_outcome":"fail_closed","required_turns_after":[]}
+  ]
+}

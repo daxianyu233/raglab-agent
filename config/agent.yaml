@@ -1,0 +1,56 @@
+experiment_name: bm25_deepseek_tool_calling_agent
+
+retrieval:
+  type: bm25
+  config_path: config/bm25.yaml
+
+model:
+  provider: deepseek
+  model_name: deepseek-v4-flash
+
+  base_url: https://api.deepseek.com
+  api_key_env: DEEPSEEK_API_KEY
+
+  thinking_enabled: false
+  reasoning_effort: high
+
+  temperature: 0.0
+  max_output_tokens: 1024
+  timeout: 120
+  max_retries: 2
+
+tool:
+  name: search_knowledge_base
+
+  # 模型没有传入 top_k 时的默认值。
+  default_top_k: 5
+
+  # 防止模型一次请求过多结果。
+  maximum_top_k: 10
+
+  # 每个 Chunk 最多返回给模型的字符数。
+  max_characters_per_document: 1500
+
+agent:
+  # 最多允许多少轮“模型决策 → 工具执行”。
+  max_steps: 4
+
+validation:
+  # 当前验证任务要求一定发生工具调用。
+  require_tool_call: true
+
+  # 只允许调用这个知识库工具。
+  expected_tool_name: search_knowledge_base
+
+display:
+  show_tool_arguments: true
+
+  # 是否打印完整工具返回内容。
+  show_tool_output: false
+
+  # 不显示完整工具结果时，预览多少字符。
+  tool_output_preview_characters: 600
+
+  show_model_calls: true
+  show_usage: true
+  show_latency: true

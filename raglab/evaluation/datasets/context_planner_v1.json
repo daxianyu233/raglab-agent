@@ -1,0 +1,791 @@
+[
+  {
+    "case_id": "self_001",
+    "category": "self_contained",
+    "user_input": "把这句话翻译成英文：可靠的系统需要清晰的模块边界。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [
+      "history_query",
+      "long_term_memory_query"
+    ],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_002",
+    "category": "self_contained",
+    "user_input": "把下面这句话改得更正式：这个程序跑得挺稳的。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [
+      "history_query",
+      "long_term_memory_query"
+    ],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_003",
+    "category": "self_contained",
+    "user_input": "将下面三点合并成一句话：接口清晰；状态可恢复；日志可追踪。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_004",
+    "category": "self_contained",
+    "user_input": "只回复 JSON：{\"status\":\"ok\",\"count\":3}",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_005",
+    "category": "self_contained",
+    "user_input": "给变量“用户当前输入”起一个合适的 Python snake_case 名称。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_006",
+    "category": "self_contained",
+    "user_input": "把“Fail Closed”改写成一句容易让非技术人员理解的中文。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_007",
+    "category": "self_contained",
+    "user_input": "把这段文字压缩到20字以内：系统只在必要时读取历史信息，从而减少无关上下文。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "history_distractor"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "self_008",
+    "category": "self_contained",
+    "user_input": "不要搜索任何外部资料。计算 17+25，只给结果。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false,
+      "external_retrieval_allowed": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "explicit_no_retrieval"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "fresh_001",
+    "category": "fresh_retrieval",
+    "user_input": "给我今天的 GitHub 技术日报。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": true,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "github",
+      "temporal"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "fresh_002",
+    "category": "fresh_retrieval",
+    "user_input": "查询当前已经保存的 GitHub 技术情报中 ai-memory 项目的资料，并概括它解决什么问题。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": true,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "github"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "fresh_003",
+    "category": "fresh_retrieval",
+    "user_input": "从知识库里查一下 RRF 融合检索的相关内容再回答。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": true,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "rag"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "fresh_004",
+    "category": "fresh_retrieval",
+    "user_input": "查询 GitHub Intelligence 数据库里最近更新的 5 个项目。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": true,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "sql"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "fresh_005",
+    "category": "fresh_retrieval",
+    "user_input": "请根据 PDF 知识库中的原文解释 BM25 和 Dense Retrieval 的区别。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": true,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "rag"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "fresh_006",
+    "category": "fresh_retrieval",
+    "user_input": "查一下已有技术情报里 LangGraph 相关项目有哪些，不要凭模型记忆回答。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": true,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [
+      "github"
+    ],
+    "notes": ""
+  },
+  {
+    "case_id": "prev_001",
+    "category": "previous_answer",
+    "user_input": "把你刚才的回答改得正式一点。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [
+      "history_query"
+    ],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "prev_002",
+    "category": "previous_answer",
+    "user_input": "把上一轮回答压缩成三点，每点一句话。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "prev_003",
+    "category": "previous_answer",
+    "user_input": "把你上一条回复翻译成英文，不要添加新内容。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "prev_004",
+    "category": "previous_answer",
+    "user_input": "刚才那段解释太长了，保留结论，删掉例子。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "prev_005",
+    "category": "previous_answer",
+    "user_input": "把你刚才给我的命令改成 PowerShell 版本，不要重新查询资料。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false,
+      "external_retrieval_allowed": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "prev_006",
+    "category": "previous_answer",
+    "user_input": "上一轮最后一段措辞不自然，只改那一段。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "evidence_001",
+    "category": "previous_evidence",
+    "user_input": "不要重新搜索，直接根据刚才 RAG 查到的原始资料重新整理结论。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "evidence_002",
+    "category": "previous_evidence",
+    "user_input": "用上一轮 Tool 返回的原始结果重新比较这几个项目，不要只改写上一轮答案，也不要重新查询。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "evidence_003",
+    "category": "previous_evidence",
+    "user_input": "不要再次执行 SQL，直接根据刚才 SQL 的原始结果重新计算并解释。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "evidence_004",
+    "category": "previous_evidence",
+    "user_input": "直接使用上一轮检索到的 PDF 原始证据重新回答，不要重新检索。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "evidence_005",
+    "category": "previous_evidence",
+    "user_input": "刚才工具结果里有几个项目，请基于那些原始 Tool Evidence 重新分组，不要再搜。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "previous_turn",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "recent_001",
+    "category": "recent_turns",
+    "user_input": "把我们刚才连续三轮确定的方案合并成一个最终版本。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "recent_turns",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "recent_002",
+    "category": "recent_turns",
+    "user_input": "对比前两轮分别讨论的方案 A 和方案 B，给出差异。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "recent_turns",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "recent_003",
+    "category": "recent_turns",
+    "user_input": "根据最近几轮已经确定的步骤，告诉我现在下一步该做什么。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "recent_turns",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "recent_004",
+    "category": "recent_turns",
+    "user_input": "总结我们最近几轮已经确认的决定和还没解决的问题。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "recent_turns",
+      "previous_answer_required": true,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "hist_001",
+    "category": "historical_search",
+    "user_input": "十几轮前我们聊过 ai-memory 不用向量数据库这件事，把当时保存的原始资料找出来再解释，不要重新查询 GitHub。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "historical_search",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [
+      "history_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "hist_002",
+    "category": "historical_search",
+    "user_input": "从较早的会话历史里找我们最开始讨论 Scheduler Single-Flight 的那一轮，不要重新搜索外部资料。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "historical_search",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [
+      "history_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "hist_003",
+    "category": "historical_search",
+    "user_input": "很早之前我问过 Tool Policy 的 Fail-Closed 设计，请把当时那轮已有证据找回来，不要重新检索。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "historical_search",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [
+      "history_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "hist_004",
+    "category": "historical_search",
+    "user_input": "搜索这个线程更早的记录，找出我们第一次决定使用 Context Planner 的那轮讨论，并基于当时记录回答。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "historical_search",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": true,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [
+      "history_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "hist_005",
+    "category": "historical_search",
+    "user_input": "几天前这个线程里讨论过历史检索打分方式，找到那一轮原始记录再告诉我怎么算的，不要查外部资料。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": true,
+      "history_scope": "historical_search",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": true,
+      "external_retrieval_required": false,
+      "external_retrieval_allowed": false,
+      "long_term_memory_required": false
+    },
+    "nonempty_fields": [
+      "history_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "ltm_001",
+    "category": "long_term_memory",
+    "user_input": "不要使用当前线程历史，从我保存的跨会话长期记忆中找一下我的求职城市偏好。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": true
+    },
+    "nonempty_fields": [
+      "long_term_memory_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  },
+  {
+    "case_id": "ltm_002",
+    "category": "long_term_memory",
+    "user_input": "读取我的长期记忆，告诉我之前保存的常用开发环境是什么；这不是当前对话里的信息。",
+    "previous_turn_available": true,
+    "historical_archive_available": true,
+    "long_term_memory_available": true,
+    "expected": {
+      "history_required": false,
+      "history_scope": "none",
+      "previous_answer_required": false,
+      "raw_tool_evidence_required": false,
+      "external_retrieval_required": false,
+      "long_term_memory_required": true
+    },
+    "nonempty_fields": [
+      "long_term_memory_query"
+    ],
+    "empty_fields": [],
+    "tags": [],
+    "notes": ""
+  }
+]

@@ -1,0 +1,36 @@
+experiment_name: baseline_recursive_dense_k5
+
+corpus:
+  input_dir: corpus/pdf
+  file_types: [pdf]
+
+splitter:
+  type: recursive_character
+  chunk_size: 600
+  chunk_overlap: 80
+  preserve_metadata: true
+
+embedding:
+  provider: huggingface
+  model: BAAI/bge-small-zh-v1.5
+  normalize_embeddings: true
+  
+vector_store:
+  type: chroma
+  collection_name: raglab_baseline
+  persist_directory: storage/chroma/baseline
+
+retrieval:
+  type: dense
+  search_type: similarity
+  top_k: 5
+  metadata_filter: null
+
+generation:
+  temperature: 0
+  max_context_tokens: 5000
+  require_citations: true
+
+outputs:
+  report_path: reports/baseline_results.json
+  save_retrieved_chunks: true

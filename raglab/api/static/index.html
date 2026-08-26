@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>RAGLab Agent</title>
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand-row">
+        <div class="brand-mark">R</div>
+        <div>
+          <strong>RAGLab</strong>
+          <span>Agent Console</span>
+        </div>
+      </div>
+
+      <button class="new-chat" id="new-chat" type="button">
+        <span>＋</span> 新建会话
+      </button>
+
+      <div class="sidebar-label">最近会话</div>
+      <nav class="thread-list" id="thread-list" aria-label="会话列表"></nav>
+
+      <div class="sidebar-footer">
+        <label for="user-id">用户 ID</label>
+        <input id="user-id" value="local-user" maxlength="200" list="user-list">
+        <datalist id="user-list"></datalist>
+        <div class="service-status">
+          <span class="status-dot" id="status-dot"></span>
+          <span id="status-text">正在连接服务…</span>
+        </div>
+      </div>
+    </aside>
+
+    <main class="chat-panel">
+      <header class="topbar">
+        <button class="icon-button menu-button" id="menu-button" type="button" aria-label="打开菜单">☰</button>
+        <div>
+          <h1>RAGLab Agent</h1>
+          <p id="thread-label">正在创建会话…</p>
+        </div>
+        <button class="trace-toggle" id="runtime-button" type="button">Runtime</button>
+      </header>
+
+      <section class="messages" id="messages" aria-live="polite">
+        <div class="welcome" id="welcome">
+          <div class="welcome-logo">R</div>
+          <h2>今天想研究什么？</h2>
+          <p>可以查询 PDF 知识库、GitHub 技术情报，或测试 Agent 的 Tool Calling 与 HITL 流程。</p>
+          <div class="suggestions">
+            <button type="button" data-prompt="请介绍这个知识库中关于 Agent 的主要内容。">查询知识库</button>
+            <button type="button" data-prompt="请总结本地 GitHub Intelligence 中值得关注的项目。">查询技术情报</button>
+            <button type="button" data-prompt="请列出你当前可以使用的 Skills。">查看 Skills</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="approval-card hidden" id="approval-card">
+        <div class="approval-icon">!</div>
+        <div class="approval-content">
+          <strong>需要人工审批</strong>
+          <p id="approval-message">高风险工具调用已暂停。</p>
+          <pre id="approval-detail"></pre>
+        </div>
+        <div class="approval-actions">
+          <button class="reject" id="reject-button" type="button">拒绝</button>
+          <button class="approve" id="approve-button" type="button">批准执行</button>
+        </div>
+      </section>
+
+      <footer class="composer-wrap">
+        <form class="composer" id="chat-form">
+          <textarea id="question" rows="1" maxlength="10000" placeholder="给 RAGLab Agent 发送消息" required></textarea>
+          <button class="send-button" id="send-button" type="submit" aria-label="发送">↑</button>
+        </form>
+        <p class="composer-note">Enter 发送，Shift + Enter 换行。Agent 的回答可能存在错误，请核对重要信息。</p>
+      </footer>
+    </main>
+
+    <dialog class="runtime-dialog" id="runtime-dialog">
+      <div class="dialog-head">
+        <div>
+          <strong>Runtime 状态</strong>
+          <p>当前进程加载的工具与 Skills</p>
+        </div>
+        <button id="close-runtime" type="button" aria-label="关闭">×</button>
+      </div>
+      <pre id="runtime-content">正在读取…</pre>
+    </dialog>
+  </div>
+
+  <template id="message-template">
+    <article class="message">
+      <div class="avatar"></div>
+      <div class="message-body">
+        <div class="message-role"></div>
+        <div class="message-content"></div>
+        <details class="message-trace hidden">
+          <summary>查看执行详情</summary>
+          <pre></pre>
+        </details>
+      </div>
+    </article>
+  </template>
+
+  <!-- 查询参数用于前端代码更新后绕过浏览器旧缓存。 -->
+  <script src="/static/app.js?v=20260826-2" defer></script>
+</body>
+</html>

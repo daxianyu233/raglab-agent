@@ -1,0 +1,40 @@
+experiment_name: hybrid_rrf_bge_reranker_k5
+
+paths:
+  # 继续复用前面已经完成的 Hybrid Retrieval 配置。
+  hybrid_config: config/hybrid.yaml
+
+reranker:
+  type: bge_cross_encoder
+
+  # 第一阶段 Hybrid 提供给 Reranker 的候选数量。
+  # 注意：这里不是最终返回数量。
+  candidate_top_k: 10
+
+  # Reranker 重新排序后最终保留的数量。
+  final_top_k: 5
+
+  model_name: BAAI/bge-reranker-base
+
+  # null 表示自动选择：
+  # 有可用 CUDA 时使用 GPU，否则使用 CPU。
+  device: null
+
+  # 每批同时评估多少组“问题—候选文本”。
+  batch_size: 8
+
+  # 问题与候选文本合并后的最大 Token 数量。
+  max_length: 512
+
+  # 第一轮先关闭半精度，保证兼容性。
+  # 确定使用 NVIDIA GPU 后可以再改为 true。
+  use_fp16: false
+
+outputs:
+  report_path: reports/reranker_results.json
+  save_retrieved_chunks: true
+
+comparison:
+  dense_report_path: reports/baseline_results.json
+  bm25_report_path: reports/bm25_results.json
+  hybrid_report_path: reports/hybrid_results.json

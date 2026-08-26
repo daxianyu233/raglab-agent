@@ -1,0 +1,42 @@
+experiment_name: bm25_deepseek_v4_conversational_rag
+
+retrieval:
+  type: bm25
+  config_path: config/bm25.yaml
+  top_k: 5
+
+context:
+  max_documents: 5
+  max_characters: 8000
+  include_metadata: true
+  deduplicate: true
+
+model:
+  provider: deepseek
+  model_name: deepseek-v4-flash
+
+  base_url: https://api.deepseek.com
+  api_key_env: DEEPSEEK_API_KEY
+
+  thinking_enabled: false
+  reasoning_effort: high
+
+  temperature: 0.0
+  max_output_tokens: 1024
+  timeout: 120
+  max_retries: 2
+
+conversation:
+  # 最多把最近多少轮历史交给模型。
+  max_history_turns: 6
+
+  # 第一轮不改写。
+  # 第二轮开始，每轮都由 DeepSeek 将问题改写为独立检索问题。
+  rewrite_mode: always
+
+display:
+  show_sources: true
+  show_context: false
+  show_usage: true
+  show_latency: true
+  show_retrieval_question: true

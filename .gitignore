@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Environment
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+
+# Runtime state and generated indexes
+storage/**
+!storage/.gitkeep
+
+# Generated reports
+reports/**
+!reports/.gitkeep
+
+# Collected GitHub snapshots are runtime data, not source code
+data/intelligence/**
+!data/intelligence/.gitkeep
+
+# Local bridge/runtime helper files
+scripts/bridge_cli.py
+cleanup-*.ps1
+
+# One-off local debugging, document and resume utilities
+scripts/_*.py
+scripts/build_interview_guide.py
+scripts/docx2pdf.py
+scripts/docx2pdf*.vbs
+scripts/drive_cli_update.py
+scripts/dump_*.py
+scripts/fix_benchmark.py
+scripts/gen_*.py
+scripts/optimize_resume.py
+scripts/remove_metrics.py
+scripts/revise_resume.py
+scripts/simulate_compress.py
+scripts/update_benchmark_data.py
+scripts/verify_docx.py
+requirements-phase1.txt
+PHASE*_BENCHMARK_CORRECTION.md
+
+# Personal job-search documents and exported media
+*.docx
+*.pdf
+!data/corpus/pdf/*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# Local design/audit notes that contain machine-specific paths
+raglab_e2e_data_inventory.md
+
+# Accidental legacy copy retained locally
+.../
+
+# Windows
+Thumbs.db
+Desktop.ini

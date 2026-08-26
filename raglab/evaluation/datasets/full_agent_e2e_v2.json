@@ -1,0 +1,187 @@
+{
+  "version": "2.0",
+  "purpose": "Full Agent E2E regression benchmark grounded in the project's persisted data as scanned on 2026-08-20.",
+  "data_policy": {
+    "fixtures_allowed": false,
+    "synthetic_markers_allowed": false,
+    "fixed_answer_string_assertions_allowed": false,
+    "inventory": "raglab_e2e_data_inventory.md"
+  },
+  "real_data_catalog": {
+    "knowledge_base": {
+      "pdf_root": "data/corpus/pdf",
+      "manifest": "data/metadata/corpus_manifest.json",
+      "runtime_retrieval": "in-memory BM25 rebuilt from 6 PDFs",
+      "persisted_baseline_chroma": "storage/chroma/baseline",
+      "collection": "raglab_baseline",
+      "chunk_count": 29
+    },
+    "github_intelligence": {
+      "sqlite": "storage/intelligence/github_intelligence.sqlite3",
+      "bm25_documents": "storage/bm25/intelligence/documents.jsonl",
+      "bm25_pickle": "storage/bm25/intelligence/bm25_index.pkl",
+      "chroma": "storage/chroma/intelligence",
+      "collection": "github_intelligence",
+      "repository_count": 179,
+      "chunk_count": 926
+    },
+    "memory": {
+      "sqlite": "storage/agent_state/raglab_agent_state.sqlite3",
+      "namespace_pattern": ["users", "<user_id>", "memories"],
+      "persisted_memory_count": 0
+    },
+    "conversation_events": {
+      "sqlite": "storage/agent_state/raglab_conversation_events.sqlite3",
+      "event_count_at_scan": 83
+    }
+  },
+  "cases": [
+    {
+      "case_id": "e2e_v2_001",
+      "category": "direct_no_tool",
+      "user_input": "把“可靠的系统需要清晰的模块边界”翻译成英文。",
+      "setup": [],
+      "assertions": {"task_completed": true, "answer_nonempty": true, "max_tool_calls": 0, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_002",
+      "category": "knowledge_retrieval",
+      "user_input": "请从当前 PDF 知识库解释：为什么混合检索适合用 Reciprocal Rank Fusion 融合 Dense 和 BM25？请给出来源。",
+      "setup": [],
+      "real_data_dependencies": ["DOC-RET-001-P002-C000"],
+      "assertions": {"must_use_capability_groups": ["knowledge_retrieval"], "tool_result_nonempty": true, "answer_nonempty": true, "citation_count_gte": 1, "retrieved_document_structure_valid": true}
+    },
+    {
+      "case_id": "e2e_v2_003",
+      "category": "github_semantic_retrieval",
+      "user_input": "查询已保存的 GitHub 技术情报，说明 vitali87/code-graph-rag 如何用知识图谱理解多语言代码库，并给出证据。",
+      "setup": [],
+      "real_data_dependencies": ["repositories.full_name=vitali87/code-graph-rag", "repository_summary chunks in GitHub BM25"],
+      "assertions": {"must_use_capability_groups": ["github_semantic_retrieval"], "tool_result_nonempty": true, "answer_nonempty": true, "github_result_structure_valid": true, "citation_count_gte": 1}
+    },
+    {
+      "case_id": "e2e_v2_004",
+      "category": "structured_query",
+      "user_input": "查询结构化 GitHub 情报库：按各仓库最新快照的 stars 降序返回前 5 个项目，只需名称、快照日期和 stars。",
+      "setup": [],
+      "real_data_dependencies": ["repositories", "repository_snapshots"],
+      "assertions": {"must_use_capability_groups": ["structured_query"], "expected_tool": "query_github_intelligence_sql", "tool_result_nonempty": true, "result_row_count_lte": 5, "result_columns_include": ["full_name", "snapshot_date", "stars"], "result_order": {"field": "stars", "direction": "descending"}}
+    },
+    {
+      "case_id": "e2e_v2_005",
+      "category": "previous_answer_reuse",
+      "user_input": "把上一轮回答压缩成三点，不要重新检索。",
+      "setup": [{"role": "existing_event_store_thread", "user_id": "phase7d-user-20260819-134942-7701c4", "thread_id": "phase7d-thread-20260819-134942-7701c4", "source_rows": [9, 10]}],
+      "assertions": {"answer_nonempty": true, "recent_or_previous_answer_used": true, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_006",
+      "category": "previous_tool_evidence",
+      "user_input": "不要重新搜索，直接使用当时已存档的 search_github_intelligence 原始 Tool Evidence，说明那轮为什么没有把 ai-memory 冒充成一个已收录仓库。",
+      "setup": [{"role": "existing_event_store_thread", "user_id": "phase7d-user-20260819-134942-7701c4", "thread_id": "phase7d-thread-20260819-134942-7701c4", "source_rows": [1, 2, 3, 4, 5, 6, 7, 8]}],
+      "assertions": {"answer_nonempty": true, "historical_raw_tool_evidence_used": true, "historical_tool_name": "search_github_intelligence", "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_007",
+      "category": "recent_context",
+      "user_input": "对比最近两轮中“阶段七测试A”和“阶段七测试B”的回复约束，只使用最近对话。",
+      "setup": [{"role": "existing_event_store_thread", "user_id": "phase7d-user-20260819-134942-7701c4", "thread_id": "phase7d-thread-20260819-134942-7701c4", "source_rows": [15, 16, 17, 18]}],
+      "assertions": {"answer_nonempty": true, "recent_context_used": true, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_008",
+      "category": "historical_context",
+      "user_input": "从较早的真实会话历史中找出最初查询 ai-memory 的主题和当时使用的 Tool，不要重新查 GitHub。",
+      "setup": [{"role": "existing_event_store_thread", "user_id": "phase7d-user-20260819-134942-7701c4", "thread_id": "phase7d-thread-20260819-134942-7701c4", "source_rows": [1, 2, 3, 19, 20, 21, 22]}],
+      "assertions": {"answer_nonempty": true, "historical_context_used": true, "historical_raw_tool_evidence_used": true, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_009",
+      "category": "long_term_memory",
+      "user_input": "请只检查我当前持久化的长期记忆，告诉我是否已保存个人偏好；如果没有，请明确说证据不足，不要猜测。",
+      "setup": [{"role": "existing_user", "user_id": "test_user"}, {"role": "new_thread_for_existing_user"}],
+      "real_data_dependencies": ["raglab_agent_state.sqlite3 store row count = 0"],
+      "assertions": {"answer_nonempty": true, "long_term_memory_used": true, "long_term_memory_result_count": 0, "unsupported_memory_not_invented": true, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_010",
+      "category": "retrieval_forbidden",
+      "user_input": "不要调用任何检索工具。只把这句话改成更正式的中文：系统现在挺稳。",
+      "setup": [],
+      "assertions": {"answer_nonempty": true, "max_tool_calls": 0, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_011",
+      "category": "tool_minimality",
+      "user_input": "只从 PDF 知识库查询递归字符分块和结构化分块的差异；不需要 GitHub 情报或 SQL。",
+      "setup": [],
+      "real_data_dependencies": ["DOC-RAG-CHUNK-001-P002-C000"],
+      "assertions": {"must_use_capability_groups": ["knowledge_retrieval"], "must_not_use_capability_groups": ["github_semantic_retrieval", "structured_query"], "tool_result_nonempty": true, "answer_nonempty": true, "max_external_retrieval_calls": 1}
+    },
+    {
+      "case_id": "e2e_v2_012",
+      "category": "dynamic_capability",
+      "user_input": "请动态加载 github-intelligence-update 能力，然后立即调用 update_github_intelligence 执行更新；进入人工审批后停止等待。",
+      "setup": [],
+      "assertions": {"dynamic_capability_loaded": true, "pending_human_approval": true, "write_side_effect_count": 0}
+    },
+    {
+      "case_id": "e2e_v2_013",
+      "category": "hitl_reject",
+      "user_input": "/reject",
+      "setup": [{"role": "pending_real_tool_action", "tool_name": "update_github_intelligence", "created_by_case": "e2e_v2_012"}],
+      "assertions": {"pending_human_approval_after": false, "approval_decision": "reject", "write_side_effect_count": 0}
+    },
+    {
+      "case_id": "e2e_v2_014",
+      "category": "hitl_approve",
+      "user_input": "/approve",
+      "setup": [{"role": "pending_real_tool_action", "tool_name": "update_github_intelligence", "approval_environment": "authorized benchmark sandbox"}],
+      "assertions": {"pending_human_approval_after": false, "approval_decision": "approve", "external_effect_ledger_entry_created": true, "no_duplicate_side_effect": true}
+    },
+    {
+      "case_id": "e2e_v2_015",
+      "category": "event_persistence",
+      "user_input": "请回答当前 GitHub Intelligence SQLite 中 repositories 表的作用，不要查询具体数据。",
+      "setup": [],
+      "assertions": {"answer_nonempty": true, "event_store_contains_roles": ["human", "assistant"], "new_turn_persisted": true, "persisted_thread_id_matches_runtime": true}
+    },
+    {
+      "case_id": "e2e_v2_016",
+      "category": "thread_isolation",
+      "user_input": "当前线程是否能直接看到另一线程 adapter-real-test 中查询 PDF 的对话内容？不要使用长期记忆或外部检索。",
+      "setup": [{"role": "existing_user", "user_id": "test_user"}, {"role": "existing_source_thread", "thread_id": "adapter-real-test", "source_rows": [68, 69, 70, 71]}, {"role": "new_thread", "thread_id": "benchmark-thread-isolation-v2"}],
+      "assertions": {"short_term_thread_isolation": true, "cross_thread_content_not_in_model_input": true, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_017",
+      "category": "tool_error_recovery",
+      "user_input": "查询 2026-08-16 的 GitHub 情报中 github/spec-kit 的项目摘要。如果首次 metadata 参数不符合 Tool schema，请根据真实错误自行修正，不得伪造结果。",
+      "setup": [{"role": "first_call_instruction", "tool_name": "search_github_intelligence", "invalid_argument": {"doc_types": "repository_summary"}, "expected_real_validation": "doc_types must be a list"}],
+      "real_data_dependencies": ["repository_summary:2026-08-16:github/spec-kit"],
+      "assertions": {"tool_error_observed": true, "tool_retry_or_correction_observed": true, "corrected_tool_result_nonempty": true, "answer_nonempty": true}
+    },
+    {
+      "case_id": "e2e_v2_018",
+      "category": "max_steps",
+      "user_input": "尝试完成一次受 max_steps 约束的检索：从 PDF 知识库解释检索充分性判断；不要重复调用相同 Tool。",
+      "setup": [],
+      "real_data_dependencies": ["DOC-LG-001-P003-C000"],
+      "assertions": {"tool_calls_lte_configured_max_steps": true, "no_infinite_loop": true, "duplicate_equivalent_tool_calls_lte": 1, "runtime_terminated_cleanly": true}
+    },
+    {
+      "case_id": "e2e_v2_019",
+      "category": "archive_reconciliation",
+      "user_input": "继续该真实历史线程，并核对 checkpoint 中的消息是否已与 Conversation Event Store 归档一致；不要查外部资料。",
+      "setup": [{"role": "existing_event_store_thread", "user_id": "test_user", "thread_id": "adapter-test", "source_rows": [64, 65, 66, 67]}, {"role": "existing_checkpoint_thread", "thread_id": "adapter-test"}],
+      "assertions": {"archive_reconciliation_checked": true, "archive_reconciliation_success": true, "event_store_source_of_truth_preserved": true, "max_external_retrieval_calls": 0}
+    },
+    {
+      "case_id": "e2e_v2_020",
+      "category": "working_memory_safety",
+      "user_input": "从已存档的较早历史中恢复最初 ai-memory 查询的原始 Tool Evidence，不要重新检索 GitHub，也不要仅依赖压缩摘要。",
+      "setup": [{"role": "existing_long_event_thread", "user_id": "phase7d-user-20260819-134942-7701c4", "thread_id": "phase7d-thread-20260819-134942-7701c4", "source_rows": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]}],
+      "assertions": {"answer_nonempty": true, "historical_raw_tool_evidence_used": true, "event_store_source_of_truth_preserved": true, "protected_current_human_preserved": true, "max_external_retrieval_calls": 0}
+    }
+  ]
+}

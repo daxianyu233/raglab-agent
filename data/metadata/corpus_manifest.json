@@ -1,0 +1,56 @@
+[
+  {
+    "doc_id": "DOC-LC-001",
+    "title": "LangChain Runnable 与链式编排",
+    "corpus": "langchain_core",
+    "language": "zh-CN",
+    "source_type": "synthetic_tutorial",
+    "markdown_file": "corpus/markdown/01_langchain_runnable_chain.md",
+    "pdf_file": "corpus/pdf/01_langchain_runnable_chain.pdf"
+  },
+  {
+    "doc_id": "DOC-RET-001",
+    "title": "Retriever、Vector Store 与混合检索",
+    "corpus": "retrieval",
+    "language": "zh-CN",
+    "source_type": "synthetic_tutorial",
+    "markdown_file": "corpus/markdown/02_retriever_vectorstore.md",
+    "pdf_file": "corpus/pdf/02_retriever_vectorstore.pdf"
+  },
+  {
+    "doc_id": "DOC-RAG-CHUNK-001",
+    "title": "文档加载、清洗与分块设计",
+    "corpus": "rag_engineering",
+    "language": "zh-CN",
+    "source_type": "synthetic_tutorial",
+    "markdown_file": "corpus/markdown/03_document_loading_chunking.md",
+    "pdf_file": "corpus/pdf/03_document_loading_chunking.pdf"
+  },
+  {
+    "doc_id": "DOC-RAG-ADV-001",
+    "title": "查询改写、多路召回与重排序",
+    "corpus": "rag_engineering",
+    "language": "zh-CN",
+    "source_type": "synthetic_tutorial",
+    "markdown_file": "corpus/markdown/04_query_rewrite_rerank.md",
+    "pdf_file": "corpus/pdf/04_query_rewrite_rerank.pdf"
+  },
+  {
+    "doc_id": "DOC-LG-001",
+    "title": "LangGraph 状态、Checkpointer 与 Store",
+    "corpus": "langgraph",
+    "language": "zh-CN",
+    "source_type": "synthetic_tutorial",
+    "markdown_file": "corpus/markdown/05_langgraph_state_persistence.md",
+    "pdf_file": "corpus/pdf/05_langgraph_state_persistence.pdf"
+  },
+  {
+    "doc_id": "DOC-EVAL-001",
+    "title": "RAG 评测与可重复实验设计",
+    "corpus": "evaluation",
+    "language": "zh-CN",
+    "source_type": "synthetic_tutorial",
+    "markdown_file": "corpus/markdown/06_rag_evaluation.md",
+    "pdf_file": "corpus/pdf/06_rag_evaluation.pdf"
+  }
+]

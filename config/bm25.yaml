@@ -1,0 +1,21 @@
+experiment_name: bm25_recursive_k5
+
+corpus:
+  input_dir: data/corpus/pdf
+  file_types: [pdf]
+
+splitter:
+  type: recursive_character
+  chunk_size: 600
+  chunk_overlap: 80
+  preserve_metadata: true
+
+retrieval:
+  type: bm25
+  top_k: 5
+  k1: 1.5
+  b: 0.75
+
+outputs:
+  report_path: reports/bm25_results.json
+  save_retrieved_chunks: true

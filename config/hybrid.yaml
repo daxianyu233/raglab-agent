@@ -1,0 +1,37 @@
+experiment_name: hybrid_dense_bm25_rrf_k5
+
+paths:
+  dense_config: config/baseline.yaml
+  bm25_config: config/bm25.yaml
+  evaluation_dataset: null
+
+retrieval:
+  final_top_k: 5
+
+  # 注意：这是融合前每个检索器召回的候选数量，
+  # 不是最后返回给评测器的数量。
+  dense_candidate_top_k: 20
+  bm25_candidate_top_k: 20
+
+fusion:
+  type: rrf
+
+  # 本轮固定参数，先完成无调参基线。
+  rrf_k: 60
+
+  # 第一轮采用等权融合。
+  dense_weight: 1.0
+  bm25_weight: 1.0
+
+  deduplicate_by: chunk_id
+  require_chunk_id: true
+
+evaluation:
+  metrics:
+    - hit_at_5
+    - recall_at_5
+    - mrr_at_5
+
+outputs:
+  report_path: reports/hybrid_results.json
+  save_retrieved_chunks: true

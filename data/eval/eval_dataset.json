@@ -1,0 +1,559 @@
+[
+  {
+    "id": "Q001",
+    "question": "Runnable 统一抽象的主要工程价值是什么？",
+    "expected_answer": "让模型、提示、检索器、解析器和普通函数以统一方式组合、执行、替换与测试。",
+    "relevant_doc_ids": [
+      "DOC-LC-001"
+    ],
+    "relevant_section_ids": [
+      "LC-RUN-01"
+    ],
+    "category": "concept",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q002",
+    "question": "为什么 RAG 链中需要同时保留 question 和 context？",
+    "expected_answer": "question 保留原始用户意图，context 来自检索结果；并行构造能显式区分数据来源并避免混成不可追踪字符串。",
+    "relevant_doc_ids": [
+      "DOC-LC-001"
+    ],
+    "relevant_section_ids": [
+      "LC-RUN-02"
+    ],
+    "category": "design",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q003",
+    "question": "batch 模式最适合什么场景，使用时要注意什么？",
+    "expected_answer": "适合批量离线评测；需控制并发、费用，并为每条样本隔离运行标识和状态。",
+    "relevant_doc_ids": [
+      "DOC-LC-001"
+    ],
+    "relevant_section_ids": [
+      "LC-RUN-03"
+    ],
+    "category": "exact",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q004",
+    "question": "为什么结构化输出比字符串切割更可靠？",
+    "expected_answer": "结构化输出可被验证和稳定消费；格式错误可触发重试或降级，而字符串切割脆弱且难维护。",
+    "relevant_doc_ids": [
+      "DOC-LC-001"
+    ],
+    "relevant_section_ids": [
+      "LC-RUN-04"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q005",
+    "question": "调试 RAG 时除了最终答案还应该记录哪些中间信息？",
+    "expected_answer": "至少记录原始查询、改写查询、召回文档 ID、排序分数、上下文、耗时和 Token。",
+    "relevant_doc_ids": [
+      "DOC-LC-001"
+    ],
+    "relevant_section_ids": [
+      "LC-RUN-05"
+    ],
+    "category": "list",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q006",
+    "question": "Retriever 和 Vector Store 有什么区别？",
+    "expected_answer": "Retriever 描述输入查询返回文档的检索行为；Vector Store 负责向量存储和相似度搜索，只是 Retriever 的一种来源。",
+    "relevant_doc_ids": [
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "RET-BASIC-01"
+    ],
+    "category": "comparison",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q007",
+    "question": "什么类型的问题更适合 BM25？",
+    "expected_answer": "精确类名、错误码、接口字段、产品编号和缩写等依赖词项匹配的问题。",
+    "relevant_doc_ids": [
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "RET-BM25-01"
+    ],
+    "category": "application",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q008",
+    "question": "为什么混合检索不应直接相加 Dense 与 BM25 的原始分数？",
+    "expected_answer": "两类分数尺度不同，直接相加缺乏可比性，通常应使用排名融合。",
+    "relevant_doc_ids": [
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "RET-HYBRID-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q009",
+    "question": "Metadata Filtering 过严和过宽分别有什么风险？",
+    "expected_answer": "过严会漏召回，过宽会引入噪声。",
+    "relevant_doc_ids": [
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "RET-META-01"
+    ],
+    "category": "comparison",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q010",
+    "question": "增大 Top-K 一定能提高最终答案质量吗？",
+    "expected_answer": "不一定；可能提高召回机会，也会引入噪声、增加上下文和 Token 成本。",
+    "relevant_doc_ids": [
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "RET-TOPK-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q011",
+    "question": "文档加载后最少应保留哪两类信息？",
+    "expected_answer": "page_content 和 metadata。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-LOAD-01"
+    ],
+    "category": "exact",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q012",
+    "question": "为什么不能把所有换行都清除？",
+    "expected_answer": "会破坏标题、正文、列表和代码块边界，使结构化分块失去依据。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-CLEAN-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q013",
+    "question": "固定长度分块的优点和主要缺点是什么？",
+    "expected_answer": "优点是简单稳定；缺点是可能在句子、列表或代码中间切断语义。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-FIXED-01"
+    ],
+    "category": "comparison",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q014",
+    "question": "结构化分块为什么要把标题路径写进 metadata？",
+    "expected_answer": "标题路径能为正文块补充章节语境，并支持过滤、引用和路由。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-STRUCT-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q015",
+    "question": "父子文档检索如何兼顾精确性和完整性？",
+    "expected_answer": "使用小子块建立索引进行精确检索，命中后返回更大的父块作为完整上下文。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-PARENT-01"
+    ],
+    "category": "concept",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q016",
+    "question": "比较分块策略时为什么要控制其他变量？",
+    "expected_answer": "否则无法判断效果变化来自分块、Embedding、Retriever 还是 Top-K。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-EXP-01"
+    ],
+    "category": "experiment",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q017",
+    "question": "对话追问“那它保存在哪里”为什么不能直接检索？",
+    "expected_answer": "代词依赖历史上下文，原始字符串缺少明确实体，需要改写为独立查询。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-QUERY-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q018",
+    "question": "Multi-Query 的主要收益和代价是什么？",
+    "expected_answer": "收益是通过多个表达提高召回；代价是增加调用、去重复杂度和噪声。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-MULTIQ-01"
+    ],
+    "category": "comparison",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q019",
+    "question": "HyDE 为什么可能把检索带偏？",
+    "expected_answer": "假设性答案由模型生成，若假设错误，其向量会把检索引向错误方向。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-HYDE-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q020",
+    "question": "Retriever 和 Reranker 在流水线中的目标有什么不同？",
+    "expected_answer": "Retriever 追求较高召回，Reranker 对候选进行更精细的相关性排序。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001",
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-RERANK-01",
+      "RET-HYBRID-01"
+    ],
+    "category": "comparison",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q021",
+    "question": "上下文压缩为什么可能损害政策类问答？",
+    "expected_answer": "抽取可能删除限定条件、否定词或上下文关系，导致政策含义改变。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-COMPRESS-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "hard",
+    "answerable": true
+  },
+  {
+    "id": "Q022",
+    "question": "检索结果不足时系统应该怎么做？",
+    "expected_answer": "改写查询、重新检索或明确证据不足，而不是强行生成。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-SUFF-01"
+    ],
+    "category": "policy",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q023",
+    "question": "LangGraph 状态为什么不应只保存 messages？",
+    "expected_answer": "还需保存业务字段、检索结果、重试次数、审批状态等，便于节点测试和恢复。",
+    "relevant_doc_ids": [
+      "DOC-LG-001"
+    ],
+    "relevant_section_ids": [
+      "LG-STATE-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q024",
+    "question": "Checkpointer 的主要用途是什么？",
+    "expected_answer": "保存线程执行状态快照，支持多轮状态、HITL 恢复、断点续跑和调试。",
+    "relevant_doc_ids": [
+      "DOC-LG-001"
+    ],
+    "relevant_section_ids": [
+      "LG-CP-01"
+    ],
+    "category": "concept",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q025",
+    "question": "Checkpointer 与 Store 的核心区别是什么？",
+    "expected_answer": "Checkpointer 面向单线程执行状态；Store 面向跨线程长期可复用信息。",
+    "relevant_doc_ids": [
+      "DOC-LG-001"
+    ],
+    "relevant_section_ids": [
+      "LG-CP-01",
+      "LG-STORE-01"
+    ],
+    "category": "comparison",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q026",
+    "question": "为什么测试样本要使用不同 thread_id？",
+    "expected_answer": "避免前一条样本的消息和状态污染后一条样本。",
+    "relevant_doc_ids": [
+      "DOC-LG-001"
+    ],
+    "relevant_section_ids": [
+      "LG-THREAD-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q027",
+    "question": "interrupt 后为什么不应该从入口重新执行？",
+    "expected_answer": "恢复应从保存的图状态继续，避免重复执行已完成节点和高风险动作。",
+    "relevant_doc_ids": [
+      "DOC-LG-001"
+    ],
+    "relevant_section_ids": [
+      "LG-HITL-01",
+      "LG-CP-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "hard",
+    "answerable": true
+  },
+  {
+    "id": "Q028",
+    "question": "什么时候简单 RAG 不需要 LangGraph？",
+    "expected_answer": "线性、固定的 2-Step RAG 没有分支、循环、中断或多阶段验证时。",
+    "relevant_doc_ids": [
+      "DOC-LG-001"
+    ],
+    "relevant_section_ids": [
+      "LG-RAG-01"
+    ],
+    "category": "boundary",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q029",
+    "question": "为什么 RAG 评测要拆成检索和生成两层？",
+    "expected_answer": "为了区分未召回正确文档和已召回但模型未正确使用文档这两类失败。",
+    "relevant_doc_ids": [
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "EVAL-LAYER-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q030",
+    "question": "Golden Dataset 每条样本至少应包含什么？",
+    "expected_answer": "问题、参考答案、相关文档 ID、相关章节 ID、类别、难度和可回答标记。",
+    "relevant_doc_ids": [
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "EVAL-DATA-01"
+    ],
+    "category": "list",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q031",
+    "question": "相关章节有两个，Top-5 只找回一个，Recall@5 是多少？",
+    "expected_answer": "0.5。",
+    "relevant_doc_ids": [
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "EVAL-RET-01"
+    ],
+    "category": "calculation",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q032",
+    "question": "回答正确但忠实性低可能意味着什么？",
+    "expected_answer": "答案可能来自模型记忆而不是当前检索上下文。",
+    "relevant_doc_ids": [
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "EVAL-GEN-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q033",
+    "question": "引用评测为什么不能只检查来源列表是否存在？",
+    "expected_answer": "还要验证引用 ID 是否有效、片段是否支持结论、关键结论是否都有引用。",
+    "relevant_doc_ids": [
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "EVAL-CITE-01"
+    ],
+    "category": "reasoning",
+    "difficulty": "medium",
+    "answerable": true
+  },
+  {
+    "id": "Q034",
+    "question": "为什么 RAG 实验必须记录模型和索引版本？",
+    "expected_answer": "否则实验无法复现，也无法可靠归因和比较。",
+    "relevant_doc_ids": [
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "EVAL-EXP-01"
+    ],
+    "category": "experiment",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q035",
+    "question": "如何设计一条同时考察查询改写、混合检索和重排的测试流程？",
+    "expected_answer": "先将依赖上下文的追问改写为独立查询，再并行执行 Dense/BM25，融合候选并用 Reranker 选最终上下文。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001",
+      "DOC-RET-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-QUERY-01",
+      "RET-HYBRID-01",
+      "ADV-RERANK-01"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "answerable": true
+  },
+  {
+    "id": "Q036",
+    "question": "为分块实验设计一个最小控制变量方案。",
+    "expected_answer": "固定语料、Embedding、Retriever、Top-K 和评测集，只改变 chunk_size、overlap 或结构化策略。",
+    "relevant_doc_ids": [
+      "DOC-RAG-CHUNK-001",
+      "DOC-EVAL-001"
+    ],
+    "relevant_section_ids": [
+      "CHUNK-EXP-01",
+      "EVAL-EXP-01"
+    ],
+    "category": "multi_hop",
+    "difficulty": "hard",
+    "answerable": true
+  },
+  {
+    "id": "Q037",
+    "question": "这些文档中是否说明了如何配置 Kubernetes 部署？",
+    "expected_answer": "文档没有提供 Kubernetes 部署配置，应回答证据不足。",
+    "relevant_doc_ids": [],
+    "relevant_section_ids": [],
+    "category": "unanswerable",
+    "difficulty": "easy",
+    "answerable": false
+  },
+  {
+    "id": "Q038",
+    "question": "这些文档是否给出了某个 Embedding 模型的最佳准确率？",
+    "expected_answer": "没有提供具体模型的实测准确率，不应编造。",
+    "relevant_doc_ids": [],
+    "relevant_section_ids": [],
+    "category": "unanswerable",
+    "difficulty": "easy",
+    "answerable": false
+  },
+  {
+    "id": "Q039",
+    "question": "文档是否规定 Reranker 必须使用某一家商业 API？",
+    "expected_answer": "没有，文档只说明可使用交叉编码器或 LLM。",
+    "relevant_doc_ids": [
+      "DOC-RAG-ADV-001"
+    ],
+    "relevant_section_ids": [
+      "ADV-RERANK-01"
+    ],
+    "category": "negative",
+    "difficulty": "easy",
+    "answerable": true
+  },
+  {
+    "id": "Q040",
+    "question": "这些文档是否包含 browser-use 的 CDP 具体实现代码？",
+    "expected_answer": "不包含，应明确超出当前语料范围。",
+    "relevant_doc_ids": [],
+    "relevant_section_ids": [],
+    "category": "unanswerable",
+    "difficulty": "easy",
+    "answerable": false
+  }
+]

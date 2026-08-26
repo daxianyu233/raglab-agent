@@ -1,0 +1,355 @@
+{
+  "version": "1.0",
+  "purpose": "Interface-independent full-agent E2E behavior benchmark.",
+  "fixture_catalog": {
+    "knowledge_base": {
+      "RRF_TEST_FACT_731": "RRF combines rankings by reciprocal rank.",
+      "BM25_TEST_FACT_219": "BM25 is lexical."
+    },
+    "github_semantic": {
+      "GH_TEST_FACT_442": "memory-lab focuses on long-term agent memory."
+    },
+    "structured_db": {
+      "LATEST_REPOS": [
+        "repo-delta",
+        "repo-beta",
+        "repo-alpha"
+      ]
+    },
+    "long_term_memory": {
+      "preferred_city": "Hangzhou"
+    },
+    "historical_tool_evidence": {
+      "RAW_TOOL_MARKER": "RAW_EVIDENCE_88731"
+    }
+  },
+  "cases": [
+    {
+      "case_id": "e2e_001",
+      "category": "direct_no_tool",
+      "user_input": "把“可靠系统需要清晰边界”翻译成英文。",
+      "setup": [],
+      "assertions": {
+        "task_completed": true,
+        "max_tool_calls": 0,
+        "answer_nonempty": true
+      }
+    },
+    {
+      "case_id": "e2e_002",
+      "category": "knowledge_retrieval",
+      "user_input": "从知识库查询 RRF_TEST_FACT_731，并解释 RRF 为什么适合融合不同检索器。",
+      "setup": [],
+      "assertions": {
+        "must_use_capability_groups": [
+          "knowledge_retrieval"
+        ],
+        "answer_must_contain": [
+          "RRF_TEST_FACT_731"
+        ]
+      }
+    },
+    {
+      "case_id": "e2e_003",
+      "category": "github_semantic_retrieval",
+      "user_input": "查询已有 GitHub 技术情报中的 GH_TEST_FACT_442，并说明对应项目做什么。",
+      "setup": [],
+      "assertions": {
+        "must_use_capability_groups": [
+          "github_semantic_retrieval"
+        ],
+        "answer_must_contain": [
+          "GH_TEST_FACT_442"
+        ]
+      }
+    },
+    {
+      "case_id": "e2e_004",
+      "category": "structured_query",
+      "user_input": "查询结构化技术情报数据库中最近更新的 3 个项目，按更新时间顺序给我名称。",
+      "setup": [],
+      "assertions": {
+        "must_use_capability_groups": [
+          "structured_query"
+        ],
+        "ordered_answer_fragments": [
+          "repo-delta",
+          "repo-beta",
+          "repo-alpha"
+        ]
+      }
+    },
+    {
+      "case_id": "e2e_005",
+      "category": "previous_answer_reuse",
+      "user_input": "把你刚才的回答压缩成一句话，不要重新查询任何资料。",
+      "setup": [
+        {
+          "role": "user",
+          "content": "请解释模块化设计。",
+          "fixture_assistant_answer": "MODULE_PREVIOUS_551：模块化设计强调职责边界与低耦合。"
+        }
+      ],
+      "assertions": {
+        "answer_must_contain": [
+          "MODULE_PREVIOUS_551"
+        ],
+        "max_external_retrieval_calls": 0
+      }
+    },
+    {
+      "case_id": "e2e_006",
+      "category": "previous_tool_evidence",
+      "user_input": "不要重新搜索，直接依据上一轮 Tool 的原始证据重新回答，并明确写出证据标记。",
+      "setup": [
+        {
+          "role": "tool_backed_turn",
+          "tool_result": "RAW_EVIDENCE_88731：原始工具证据用于重新分析。",
+          "assistant_answer": "上一轮做过一次简短总结。"
+        }
+      ],
+      "assertions": {
+        "answer_must_contain": [
+          "RAW_EVIDENCE_88731"
+        ],
+        "historical_raw_tool_evidence_used": true,
+        "max_external_retrieval_calls": 0
+      }
+    },
+    {
+      "case_id": "e2e_007",
+      "category": "recent_context",
+      "user_input": "对比我们刚才的方案A和方案B，只依据最近对话，不查外部资料。",
+      "setup": [
+        {
+          "role": "user",
+          "content": "方案A是什么？",
+          "fixture_assistant_answer": "RECENT_A_110：方案A使用同步接口。"
+        },
+        {
+          "role": "user",
+          "content": "方案B是什么？",
+          "fixture_assistant_answer": "RECENT_B_220：方案B使用异步接口。"
+        }
+      ],
+      "assertions": {
+        "answer_must_contain": [
+          "RECENT_A_110",
+          "RECENT_B_220"
+        ],
+        "max_external_retrieval_calls": 0
+      }
+    },
+    {
+      "case_id": "e2e_008",
+      "category": "historical_context",
+      "user_input": "找到我们较早确定的 OLD_DECISION_913，并告诉我当时决定了什么；不要重新查外部资料。",
+      "setup": [
+        {
+          "role": "user",
+          "content": "记录较早方案。",
+          "fixture_assistant_answer": "OLD_DECISION_913：采用 Token 压力触发整理。"
+        },
+        {
+          "role": "filler_turns",
+          "count": 8
+        }
+      ],
+      "assertions": {
+        "answer_must_contain": [
+          "OLD_DECISION_913"
+        ],
+        "historical_context_used": true,
+        "max_external_retrieval_calls": 0
+      }
+    },
+    {
+      "case_id": "e2e_009",
+      "category": "long_term_memory",
+      "user_input": "从我的长期记忆告诉我之前保存的求职城市偏好是什么，不要使用当前线程历史。",
+      "setup": [
+        {
+          "role": "long_term_memory",
+          "key": "preferred_city",
+          "value": "Hangzhou"
+        },
+        {
+          "role": "new_thread"
+        }
+      ],
+      "assertions": {
+        "answer_must_contain_any": [
+          "Hangzhou",
+          "杭州"
+        ],
+        "long_term_memory_used": true
+      }
+    },
+    {
+      "case_id": "e2e_010",
+      "category": "retrieval_forbidden",
+      "user_input": "不要调用任何检索工具。只把这句话改成更正式的中文：系统现在挺稳。",
+      "setup": [],
+      "assertions": {
+        "max_tool_calls": 0,
+        "max_external_retrieval_calls": 0
+      }
+    },
+    {
+      "case_id": "e2e_011",
+      "category": "tool_minimality",
+      "user_input": "从知识库查询 BM25_TEST_FACT_219；不需要查询 GitHub 或结构化数据库。",
+      "setup": [],
+      "assertions": {
+        "must_use_capability_groups": [
+          "knowledge_retrieval"
+        ],
+        "must_not_use_capability_groups": [
+          "github_semantic_retrieval",
+          "structured_query"
+        ],
+        "answer_must_contain": [
+          "BM25_TEST_FACT_219"
+        ]
+      }
+    },
+    {
+      "case_id": "e2e_012",
+      "category": "dynamic_capability",
+      "user_input": "我要执行一次受控的 GitHub 更新测试，请按系统流程加载对应能力，但在真正写操作前停下来等待审批。",
+      "setup": [],
+      "assertions": {
+        "pending_human_approval": true,
+        "write_side_effect_count": 0
+      }
+    },
+    {
+      "case_id": "e2e_013",
+      "category": "hitl_reject",
+      "user_input": "/reject",
+      "setup": [
+        {
+          "role": "pending_high_risk_action"
+        }
+      ],
+      "assertions": {
+        "pending_human_approval_after": false,
+        "write_side_effect_count": 0
+      }
+    },
+    {
+      "case_id": "e2e_014",
+      "category": "hitl_approve",
+      "user_input": "/approve",
+      "setup": [
+        {
+          "role": "pending_high_risk_action"
+        }
+      ],
+      "assertions": {
+        "pending_human_approval_after": false,
+        "write_side_effect_count": 1,
+        "no_duplicate_side_effect": true
+      }
+    },
+    {
+      "case_id": "e2e_015",
+      "category": "event_persistence",
+      "user_input": "只回复：ARCHIVE_E2E_615",
+      "setup": [],
+      "assertions": {
+        "answer_must_contain": [
+          "ARCHIVE_E2E_615"
+        ],
+        "event_store_contains_roles": [
+          "human",
+          "assistant"
+        ]
+      }
+    },
+    {
+      "case_id": "e2e_016",
+      "category": "thread_isolation",
+      "user_input": "当前线程中有没有 THREAD_A_SECRET_774？不要读取长期记忆或外部资料。",
+      "setup": [
+        {
+          "role": "thread_message",
+          "thread": "A",
+          "content": "THREAD_A_SECRET_774"
+        },
+        {
+          "role": "new_thread",
+          "thread": "B"
+        }
+      ],
+      "assertions": {
+        "short_term_thread_isolation": true
+      }
+    },
+    {
+      "case_id": "e2e_017",
+      "category": "tool_error_recovery",
+      "user_input": "使用测试工具查询 RECOVERABLE_TOOL_312，并在参数错误后自行修正。",
+      "setup": [
+        {
+          "role": "mock_tool_first_call_returns_argument_error"
+        }
+      ],
+      "assertions": {
+        "tool_retry_or_correction_observed": true,
+        "answer_must_contain": [
+          "RECOVERABLE_TOOL_312"
+        ]
+      }
+    },
+    {
+      "case_id": "e2e_018",
+      "category": "max_steps",
+      "user_input": "执行循环工具测试。",
+      "setup": [
+        {
+          "role": "mock_tool_encourages_repeated_calls"
+        }
+      ],
+      "assertions": {
+        "tool_calls_lte_configured_max_steps": true,
+        "no_infinite_loop": true
+      }
+    },
+    {
+      "case_id": "e2e_019",
+      "category": "archive_reconciliation",
+      "user_input": "继续下一轮并检查历史。",
+      "setup": [
+        {
+          "role": "checkpoint_contains_unarchived_previous_turn",
+          "marker": "REPAIR_448"
+        }
+      ],
+      "assertions": {
+        "event_store_contains": [
+          "REPAIR_448"
+        ],
+        "archive_reconciliation_success": true
+      }
+    },
+    {
+      "case_id": "e2e_020",
+      "category": "working_memory_safety",
+      "user_input": "找到较早的 OLD_RECOVERABLE_932 并告诉我对应结论。",
+      "setup": [
+        {
+          "role": "generate_long_thread",
+          "turn_count": 20,
+          "marker": "OLD_RECOVERABLE_932"
+        }
+      ],
+      "assertions": {
+        "answer_must_contain": [
+          "OLD_RECOVERABLE_932"
+        ],
+        "event_store_source_of_truth_preserved": true
+      }
+    }
+  ]
+}
