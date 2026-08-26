@@ -23,7 +23,14 @@ jobs:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dependencies
+      - name: Install CPU-only PyTorch
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install \
+            --index-url https://download.pytorch.org/whl/cpu \
+            "torch==2.13.0+cpu"
+
+      - name: Install project dependencies
         run: python -m pip install -r requirements.txt
 
       - name: Run FastAPI contract tests
