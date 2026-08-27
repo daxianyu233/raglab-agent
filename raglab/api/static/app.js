@@ -16,6 +16,7 @@ const elements = {
   form: document.querySelector("#chat-form"),
   question: document.querySelector("#question"),
   sendButton: document.querySelector("#send-button"),
+  cancelButton: document.querySelector("#cancel-button"),
   approvalCard: document.querySelector("#approval-card"),
   approvalMessage: document.querySelector("#approval-message"),
   approvalDetail: document.querySelector("#approval-detail"),
@@ -31,29 +32,45 @@ const elements = {
 };
 
 let sessions = [];
-let activeThreadId = localStorage.getItem(ACTIVE_THREAD_KEY);
+// 当前会话只属于当前浏览器标签页：刷新仍能恢复同一会话；关闭页面后
+// 再次打开或新开标签页时不沿用上一次选择，而是自动创建新会话。
+localStorage.removeItem(ACTIVE_THREAD_KEY);
+let activeThreadId = sessionStorage.getItem(ACTIVE_THREAD_KEY);
 let busy = false;
+const executionPollers = new Map();
 
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
 function saveActiveThread() {
-  if (activeThreadId) localStorage.setItem(ACTIVE_THREAD_KEY, activeThreadId);
-  else localStorage.removeItem(ACTIVE_THREAD_KEY);
+  if (activeThreadId) sessionStorage.setItem(ACTIVE_THREAD_KEY, activeThreadId);
+  else sessionStorage.removeItem(ACTIVE_THREAD_KEY);
 }
 
 function currentSession() {
   return sessions.find((session) => session.threadId === activeThreadId) || null;
 }
 
+function isExecutionActive(execution) {
+  return ["RUNNING", "CANCELLING"].includes(execution?.status);
+}
+
 function updateInteractionState() {
-  const pending = Boolean(currentSession()?.pending);
-  const inputLocked = busy || pending;
+  const session = currentSession();
+  const pending = Boolean(session?.pending);
+  const recoveredRunning = isExecutionActive(session?.execution);
+  const inputLocked = busy || pending || recoveredRunning;
 
   // 同一个 thread 停在 LangGraph interrupt 时，只允许用户处理审批。
   // 如果继续发送普通消息，会与 Checkpoint 中尚未恢复的任务发生冲突。
   elements.sendButton.disabled = inputLocked;
+  // 发送与停止占用编辑框右侧的同一个操作位，并且始终互斥显示。
+  // RUNNING/CANCELLING 时发送按钮消失；终态落库后再切回发送按钮。
+  elements.sendButton.classList.toggle("hidden", recoveredRunning);
+  elements.cancelButton.classList.toggle("hidden", !recoveredRunning);
+  // 第一次点击把状态改为 CANCELLING，随后立即禁用，避免重复取消。
+  elements.cancelButton.disabled = session?.execution?.status === "CANCELLING";
   // disabled 是浏览器原生硬限制；readOnly 作为第二层限制，并让页面在
   // 某些浏览器恢复表单状态时也不能继续修改输入内容。
   elements.question.disabled = inputLocked;
@@ -63,7 +80,9 @@ function updateInteractionState() {
   elements.approveButton.disabled = busy || !pending;
   elements.rejectButton.disabled = busy || !pending;
   elements.question.placeholder = busy
-    ? "Agent 正在执行，请等待本轮完成"
+    ? "Agent 正在执行，可点击停止按钮取消"
+    : recoveredRunning
+      ? "页面已恢复后台执行状态，请等待任务完成"
     : pending
       ? "当前会话正在等待工具审批，请先批准或拒绝"
       : "给 RAGLab Agent 发送消息";
@@ -105,6 +124,7 @@ async function createSession() {
       title: "新会话",
       messages: [],
       pending: null,
+      execution: null,
       createdAt: Date.now(),
     };
     sessions.unshift(session);
@@ -121,6 +141,7 @@ async function createSession() {
 }
 
 async function loadThreads() {
+  for (const threadId of executionPollers.keys()) stopExecutionPolling(threadId);
   const userId = elements.userId.value.trim() || "local-user";
   const body = await request(`/threads?user_id=${encodeURIComponent(userId)}`, { headers: {} });
   sessions = body.threads.map((thread) => ({
@@ -128,6 +149,7 @@ async function loadThreads() {
     title: thread.title || "新会话",
     messages: [],
     pending: null,
+    execution: null,
     createdAt: thread.created_at,
     updatedAt: thread.updated_at,
     messageCount: thread.message_count,
@@ -170,6 +192,7 @@ async function selectSession(threadId) {
       await Promise.all([
         loadMessages(session),
         refreshPending(session),
+        refreshExecution(session),
       ]);
       // 只有当前仍选中这个 thread 时才整体重绘，避免快速切换时旧请求
       // 返回较晚，把另一个会话的页面状态覆盖掉。
@@ -217,6 +240,7 @@ async function deleteSession(session) {
       `/threads/${encodeURIComponent(session.threadId)}?user_id=${encodeURIComponent(userId)}`,
       { method: "DELETE" },
     );
+    stopExecutionPolling(session.threadId);
     sessions = sessions.filter((item) => item.threadId !== session.threadId);
     if (activeThreadId === session.threadId) {
       activeThreadId = null;
@@ -236,7 +260,19 @@ async function deleteSession(session) {
 function renderMessages() {
   const session = currentSession();
   elements.messages.replaceChildren();
-  const hasMessages = Boolean(session?.messages?.length);
+  const displayMessages = [...(session?.messages || [])];
+  // 正常发起请求时，sendQuestion() 已经创建了唯一的实时 progress 气泡。
+  // 只有页面刷新导致该临时气泡丢失时，才根据持久化 execution 补一个，
+  // 避免同一次执行在页面上同时出现两个“Agent 执行中”。
+  const hasLiveProgress = displayMessages.some((message) => message.role === "status");
+  if (isExecutionActive(session?.execution) && !hasLiveProgress) {
+    const currentStep = executionStepLabel(session.execution.current_step);
+    displayMessages.push({
+      role: "status",
+      content: `Agent 仍在后台运行：${currentStep}（${session.execution.execution_id}）`,
+    });
+  }
+  const hasMessages = Boolean(displayMessages.length);
 
   if (!hasMessages) {
     const welcome = document.querySelector("#welcome")?.cloneNode(true) || buildWelcome();
@@ -246,7 +282,7 @@ function renderMessages() {
     return;
   }
 
-  for (const message of session.messages) {
+  for (const message of displayMessages) {
     const fragment = elements.messageTemplate.content.cloneNode(true);
     const article = fragment.querySelector(".message");
     article.classList.add(message.role);
@@ -261,6 +297,33 @@ function renderMessages() {
     elements.messages.append(fragment);
   }
   requestAnimationFrame(() => { elements.messages.scrollTop = elements.messages.scrollHeight; });
+}
+
+function executionStepLabel(step) {
+  const labels = {
+    runtime_started: "正在启动 Agent Runtime…",
+    runtime_resumed: "正在恢复中断后的执行…",
+    runtime_waiting: "正在等待当前会话执行锁…",
+    runtime_acquired: "已获得执行锁，正在运行 Agent…",
+    context_pipeline_started: "正在规划并组装上下文…",
+    context_pipeline_completed: "上下文准备完成…",
+    model_started: "正在请求大模型…",
+    model_completed: "模型响应完成，正在处理下一步…",
+    model_failed: "模型调用失败，正在执行恢复流程…",
+    graph_started: "正在执行 LangGraph 状态图…",
+    graph_completed: "LangGraph 执行完成，正在整理结果…",
+    tools_started: "正在调用工具…",
+    tools_completed: "工具调用完成，正在整理结果…",
+    tools_failed: "工具调用失败，正在执行恢复流程…",
+    hitl_requested: "高风险操作正在等待人工审批…",
+    runtime_blocked: "安全策略已阻止当前操作…",
+    cancellation_requested: "已请求停止，正在等待当前步骤结束…",
+    cancelled: "本次执行已取消。",
+    context_pipeline_failed: "上下文处理失败，正在执行恢复流程…",
+    hitl_resume_started: "正在恢复人工审批后的任务…",
+    hitl_resume_completed: "人工审批后的任务已恢复…",
+  };
+  return labels[step] || "正在执行当前任务…";
 }
 
 function buildWelcome() {
@@ -336,7 +399,12 @@ function responseTrace(body, streamingEvents = []) {
 
 async function sendQuestion(
   question,
-  { addUserMessage = true, allowPending = false, initialStatus = null } = {},
+  {
+    addUserMessage = true,
+    allowPending = false,
+    initialStatus = null,
+    executionId = null,
+  } = {},
 ) {
   const session = currentSession();
   if (!session || busy || (session.pending && !allowPending)) return;
@@ -357,6 +425,7 @@ async function sendQuestion(
         question,
         user_id: elements.userId.value.trim() || "local-user",
         thread_id: session.threadId,
+        execution_id: executionId || session.pending?.execution_id || null,
         include_tool_trace: true,
       }),
     });
@@ -379,7 +448,7 @@ async function sendQuestion(
     let buffer = "";
     let finalBody = null;
     let streamPending = null;
-    let expectedRunId = null;
+    let expectedExecutionId = null;
     while (true) {
       // 如果后端暂时没有 yield 新数据，这个 await 会等待，但不会重新
       // 发起 HTTP 请求。done=true 表示后端生成器结束、连接已关闭。
@@ -402,11 +471,17 @@ async function sendQuestion(
         // 后端 data 行保存的是 JSON 字符串，这里恢复成 JavaScript 对象。
         const data = JSON.parse(dataLines.join("\n"));
 
-        // accepted 确定本次连接的 run_id。之后凡是带运行身份的事件，
-        // 必须同时属于当前 thread 和当前 run，否则直接忽略。
-        if (eventName === "accepted") expectedRunId = data.run_id || null;
+        // accepted 确定本次连接的 execution_id。之后凡是带运行身份的事件，
+        // 必须同时属于当前 thread 和当前 execution，否则直接忽略。
+        if (eventName === "accepted") {
+          expectedExecutionId = data.execution_id || null;
+          session.execution = expectedExecutionId
+            ? { execution_id: expectedExecutionId, status: "RUNNING" }
+            : null;
+          updateInteractionState();
+        }
         if (data.thread_id && data.thread_id !== session.threadId) continue;
-        if (data.run_id && expectedRunId && data.run_id !== expectedRunId) continue;
+        if (data.execution_id && expectedExecutionId && data.execution_id !== expectedExecutionId) continue;
 
         // 以下事件来自 SecureAgentRuntime / SecureToolNode 的真实执行点。
         // 后端只公开节点、工具名称和状态，不发送 Prompt 或隐式推理。
@@ -461,12 +536,22 @@ async function sendQuestion(
     }
     if (!finalBody) throw new Error("流式连接结束，但没有收到最终结果。");
     session.pending = finalBody.pending_approval || streamPending || null;
+    if (session.pending) {
+      session.pending.execution_id = finalBody.execution_id || expectedExecutionId;
+      session.execution = {
+        execution_id: finalBody.execution_id || expectedExecutionId,
+        status: "WAITING_HITL",
+      };
+    } else {
+      session.execution = null;
+    }
     progress.role = "assistant";
     progress.content = finalBody.answer || "Agent 没有返回文本答案。";
     progress.trace = responseTrace(finalBody, streamingEvents);
     renderAll();
     if (!session.pending) await refreshPending();
   } catch (error) {
+    session.execution = null;
     progress.role = "error";
     progress.content = error.message;
     renderAll();
@@ -488,6 +573,7 @@ async function refreshPending(targetSession = currentSession()) {
       { headers: {}, signal: controller.signal },
     );
     session.pending = body.pending_approval || null;
+    if (session.pending) session.pending.execution_id = body.execution_id || null;
     if (activeThreadId === session.threadId) renderApproval();
   } catch (error) {
     console.warn("pending query failed or timed out", error);
@@ -496,16 +582,139 @@ async function refreshPending(targetSession = currentSession()) {
   }
 }
 
+function stopExecutionPolling(threadId) {
+  const timer = executionPollers.get(threadId);
+  if (timer) clearTimeout(timer);
+  executionPollers.delete(threadId);
+}
+
+async function pollExecution(session) {
+  const executionId = session.execution?.execution_id;
+  if (!executionId || !isExecutionActive(session.execution)) {
+    stopExecutionPolling(session.threadId);
+    return;
+  }
+  const userId = elements.userId.value.trim() || "local-user";
+  try {
+    // 刷新后的页面不再拥有原 SSE 连接，因此按 sequence_no 从数据库
+    // 续读新事件。即使一次轮询取回多条，也按原顺序逐条展示。
+    const afterSequence = session.execution.last_sequence || 0;
+    const eventBody = await request(
+      `/executions/${encodeURIComponent(executionId)}/events?user_id=${encodeURIComponent(userId)}&after_sequence=${afterSequence}`,
+      { headers: {} },
+    );
+    for (const event of eventBody.events || []) {
+      session.execution.current_step = event.event_type;
+      session.execution.last_sequence = event.sequence_no;
+      if (activeThreadId === session.threadId) renderMessages();
+      await wait(INTERNAL_EVENT_DISPLAY_MS);
+    }
+
+    const execution = await request(
+      `/executions/${encodeURIComponent(executionId)}?user_id=${encodeURIComponent(userId)}`,
+      { headers: {} },
+    );
+    session.execution = {
+      ...execution,
+      last_sequence: session.execution?.last_sequence || afterSequence,
+    };
+    if (execution.status === "WAITING_HITL") {
+      stopExecutionPolling(session.threadId);
+      await refreshPending(session);
+    } else if (["SUCCEEDED", "FAILED", "CANCELLED"].includes(execution.status)) {
+      stopExecutionPolling(session.threadId);
+      session.execution = null;
+      await Promise.all([loadMessages(session), refreshPending(session)]);
+    }
+    if (activeThreadId === session.threadId) renderAll();
+  } catch (error) {
+    console.warn("execution status query failed", error);
+  }
+  if (isExecutionActive(session.execution)) {
+    const timer = setTimeout(() => pollExecution(session), 1500);
+    executionPollers.set(session.threadId, timer);
+  }
+}
+
+async function refreshExecution(targetSession = currentSession()) {
+  const session = targetSession;
+  if (!session) return;
+  const userId = elements.userId.value.trim() || "local-user";
+  const body = await request(
+    `/threads/${encodeURIComponent(session.threadId)}/executions/active?user_id=${encodeURIComponent(userId)}`,
+    { headers: {} },
+  );
+  session.execution = body.execution || null;
+  stopExecutionPolling(session.threadId);
+  if (isExecutionActive(session.execution)) {
+    // 首次恢复时读取已有事件，只用最后一条还原当前画面；旧事件不逐条
+    // 重播。之后 pollExecution 从这个序号继续，实时展示新增步骤。
+    const executionId = session.execution.execution_id;
+    const eventBody = await request(
+      `/executions/${encodeURIComponent(executionId)}/events?user_id=${encodeURIComponent(userId)}&after_sequence=0`,
+      { headers: {} },
+    );
+    const existingEvents = eventBody.events || [];
+    const latestEvent = existingEvents.at(-1);
+    if (latestEvent) {
+      session.execution.current_step = latestEvent.event_type;
+      session.execution.last_sequence = latestEvent.sequence_no;
+    } else {
+      session.execution.last_sequence = 0;
+    }
+    const timer = setTimeout(() => pollExecution(session), 1500);
+    executionPollers.set(session.threadId, timer);
+  }
+  if (activeThreadId === session.threadId) renderAll();
+}
+
+async function cancelCurrentExecution() {
+  const session = currentSession();
+  const executionId = session?.execution?.execution_id;
+  if (!session || !executionId || session.execution.status !== "RUNNING") return;
+  const userId = elements.userId.value.trim() || "local-user";
+  const previousExecution = { ...session.execution };
+  // 在网络请求发出前先本地切换状态，立即禁用停止按钮，避免用户在
+  // cancel 接口返回前连续点击产生重复请求。
+  session.execution.status = "CANCELLING";
+  session.execution.current_step = "cancellation_requested";
+  renderAll();
+  try {
+    const execution = await request(
+      `/executions/${encodeURIComponent(executionId)}/cancel?user_id=${encodeURIComponent(userId)}`,
+      { method: "POST" },
+    );
+    session.execution = {
+      ...execution,
+      last_sequence: session.execution.last_sequence || 0,
+    };
+    const progress = [...session.messages].reverse().find((message) => message.role === "status");
+    if (progress) progress.content = "已请求停止，正在等待当前模型或工具步骤结束…";
+    renderAll();
+  } catch (error) {
+    session.execution = previousExecution;
+    renderAll();
+    addTransientError(error.message);
+  }
+}
+
 async function decide(endpoint) {
   const session = currentSession();
   if (!session || busy || !session.pending) return;
   const actionText = endpoint === "approve" ? "批准" : "拒绝";
+  const pendingExecutionId = session.pending.execution_id || null;
+  // 审批决定一经提交，旧审批卡就不再是可操作状态，应立即从页面移除。
+  // 如果后端恢复失败，sendQuestion 的错误分支会调用 refreshPending()，
+  // 再根据 LangGraph checkpoint 恢复仍然有效的中断。
+  session.pending = null;
+  renderApproval();
   // 审批也复用 /chat/stream。它不是一条用户对话，所以不把 /approve
   // 或 /reject 显示成用户消息，但恢复后的节点事件会沿同一 SSE 返回。
   await sendQuestion(`/${endpoint}`, {
     addUserMessage: false,
     allowPending: true,
     initialStatus: `正在提交${actionText}决定，并从 LangGraph Checkpoint 恢复执行…`,
+    executionId: pendingExecutionId,
   });
 }
 
@@ -553,6 +762,7 @@ elements.question.addEventListener("keydown", (event) => {
 });
 elements.question.addEventListener("input", resizeTextarea);
 elements.newChat.addEventListener("click", createSession);
+elements.cancelButton.addEventListener("click", cancelCurrentExecution);
 elements.approveButton.addEventListener("click", () => decide("approve"));
 elements.rejectButton.addEventListener("click", () => decide("reject"));
 elements.menuButton.addEventListener("click", () => elements.sidebar.classList.toggle("open"));
@@ -568,12 +778,14 @@ elements.userId.addEventListener("change", async () => {
 async function initializeConversations() {
   try {
     await loadThreads();
-    if (!sessions.length) {
+    // 没有当前标签页保存的 thread，说明这是首次打开/新标签页，直接
+    // 创建新会话。只有刷新当前标签页时 sessionStorage 才会保留 ID。
+    if (
+      !activeThreadId
+      || !sessions.some((session) => session.threadId === activeThreadId)
+    ) {
       await createSession();
       return;
-    }
-    if (!sessions.some((session) => session.threadId === activeThreadId)) {
-      activeThreadId = sessions[0].threadId;
     }
     saveActiveThread();
     renderAll();

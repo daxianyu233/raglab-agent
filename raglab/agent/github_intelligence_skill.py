@@ -24,6 +24,10 @@ from raglab.scheduler.github_update_job_coordinator import (
 from raglab.scheduler.job_repository import (
     ScheduledJobRepository,
 )
+from raglab.observability.execution_control import (
+    register_current_subprocess,
+    unregister_subprocess,
+)
 
 
 PROJECT_ROOT = Path(
@@ -1102,8 +1106,7 @@ def execute_github_intelligence_update(
 
     try:
 
-        completed = (
-            subprocess.run(
+        process = subprocess.Popen(
                 [
                     sys.executable,
                     str(
@@ -1117,21 +1120,21 @@ def execute_github_intelligence_update(
 
                 env=environment,
 
-                capture_output=True,
+                stdout=subprocess.PIPE,
+
+                stderr=subprocess.PIPE,
 
                 text=True,
 
                 encoding="utf-8",
 
                 errors="replace",
-
-                timeout=(
-                    PIPELINE_TIMEOUT_SECONDS
-                ),
-
-                check=False,
-            )
         )
+        process_execution_id = register_current_subprocess(process)
+        try:
+            stdout, stderr = process.communicate(timeout=PIPELINE_TIMEOUT_SECONDS)
+        finally:
+            unregister_subprocess(process_execution_id, process)
 
         elapsed_seconds = (
             time.time()
@@ -1143,16 +1146,16 @@ def execute_github_intelligence_update(
                 run_date=run_date,
 
                 return_code=(
-                    completed.returncode
+                    process.returncode
                 ),
 
                 stdout=(
-                    completed.stdout
+                    stdout
                     or ""
                 ),
 
                 stderr=(
-                    completed.stderr
+                    stderr
                     or ""
                 ),
 
@@ -1167,6 +1170,12 @@ def execute_github_intelligence_update(
         )
 
     except subprocess.TimeoutExpired as exc:
+
+        # subprocess.run 原本会在超时时自动杀死子进程；改用 Popen 后需
+        # 显式保留同等清理行为，避免超时流水线继续在后台写数据库。
+        if process.poll() is None:
+            process.kill()
+            process.communicate()
 
         elapsed_seconds = (
             time.time()

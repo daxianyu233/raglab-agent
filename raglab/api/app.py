@@ -31,6 +31,11 @@ from raglab.observability.runtime_events import (
     bind_runtime_event_callback,
     emit_runtime_event,
 )
+from raglab.observability.execution_control import (
+    finish_execution_context,
+    set_current_execution_id,
+    terminate_execution_subprocess,
+)
 from raglab.settings import CONFIG_DIR
 
 logger = logging.getLogger("raglab.api")
@@ -47,6 +52,8 @@ class AgentApiRuntime:
     execution_lock: threading.RLock
     _thread_locks: dict[str, threading.RLock] = field(default_factory=dict)
     _thread_locks_guard: threading.RLock = field(default_factory=threading.RLock)
+    _cancellation_events: dict[str, threading.Event] = field(default_factory=dict)
+    _cancellation_guard: threading.RLock = field(default_factory=threading.RLock)
 
     def lock_for(self, thread_id: str) -> threading.RLock:
         normalized = str(thread_id).strip()
@@ -56,6 +63,28 @@ class AgentApiRuntime:
                 lock = threading.RLock()
                 self._thread_locks[normalized] = lock
             return lock
+
+    def register_execution(self, execution_id: str) -> threading.Event:
+        with self._cancellation_guard:
+            event = threading.Event()
+            self._cancellation_events[execution_id] = event
+            return event
+
+    def request_cancellation(self, execution_id: str) -> bool:
+        with self._cancellation_guard:
+            event = self._cancellation_events.get(execution_id)
+            if event is None:
+                return False
+            event.set()
+            return True
+
+    def finish_execution(self, execution_id: str) -> None:
+        with self._cancellation_guard:
+            self._cancellation_events.pop(execution_id, None)
+
+
+class AgentExecutionCancelled(BaseException):
+    """用于穿过 Agent 普通错误恢复分支的协作式取消控制信号。"""
 
 
 class CreateThreadResponse(BaseModel):
@@ -104,12 +133,14 @@ class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=10000)
     user_id: str = Field(default="local-user", min_length=1, max_length=200)
     thread_id: str | None = Field(default=None, max_length=200)
+    execution_id: str | None = Field(default=None, max_length=200)
     include_tool_trace: bool = True
 
 
 class HitlDecisionRequest(BaseModel):
     thread_id: str = Field(min_length=1, max_length=200)
     user_id: str = Field(default="local-user", min_length=1, max_length=200)
+    execution_id: str | None = Field(default=None, max_length=200)
 
 
 class AgentExecutionStats(BaseModel):
@@ -133,6 +164,7 @@ class RuntimeTrace(BaseModel):
 
 class ChatResponse(BaseModel):
     request_id: str
+    execution_id: str
     user_id: str
     thread_id: str
     execution_status: str
@@ -156,7 +188,39 @@ class RuntimeStatusResponse(BaseModel):
 
 class PendingApprovalResponse(BaseModel):
     thread_id: str
+    execution_id: str | None = None
     pending_approval: dict[str, Any] | None
+
+
+class AgentExecutionResponse(BaseModel):
+    execution_id: str
+    user_id: str
+    thread_id: str
+    status: str
+    current_step: str
+    error_message: str
+    created_at: str
+    started_at: str
+    updated_at: str
+    finished_at: str | None
+
+
+class ActiveExecutionResponse(BaseModel):
+    thread_id: str
+    execution: AgentExecutionResponse | None
+
+
+class AgentExecutionEventResponse(BaseModel):
+    execution_id: str
+    sequence_no: int
+    event_type: str
+    payload: dict[str, Any]
+    created_at: str
+
+
+class AgentExecutionEventListResponse(BaseModel):
+    execution_id: str
+    events: list[AgentExecutionEventResponse]
 
 
 def create_thread_id() -> str:
@@ -167,11 +231,48 @@ def create_request_id() -> str:
     return "req-" + uuid.uuid4().hex[:12]
 
 
+def create_execution_id() -> str:
+    return "exec-" + uuid.uuid4().hex[:12]
+
+
 def normalize_text(value: str, *, field_name: str) -> str:
     normalized = str(value).strip()
     if not normalized:
         raise ValueError(f"{field_name} 不能为空。")
     return normalized
+
+
+def resolve_execution_id(
+    *,
+    store: ConversationEventStore,
+    user_id: str,
+    thread_id: str,
+    requested_execution_id: str | None,
+    is_resume: bool,
+) -> str:
+    """为新执行生成 ID；HITL 恢复优先复用等待中的执行。"""
+
+    if not is_resume:
+        return create_execution_id()
+    if requested_execution_id:
+        execution_id = normalize_text(requested_execution_id, field_name="execution_id")
+        execution = store.get_execution(execution_id)
+        if (
+            execution is None
+            or execution.user_id != user_id
+            or execution.thread_id != thread_id
+            or execution.status != "WAITING_HITL"
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="execution_id 不存在、已结束或不属于当前会话。",
+            )
+        return execution_id
+    if is_resume:
+        active = store.get_active_execution(thread_id=thread_id)
+        if active is not None and active.status == "WAITING_HITL":
+            return active.execution_id
+    return create_execution_id()
 
 
 def get_runtime(request: Request) -> AgentApiRuntime:
@@ -222,12 +323,13 @@ def _is_runtime_conflict(error: RuntimeError) -> bool:
 
 
 def _to_response(
-    *, request_id: str, user_id: str, thread_id: str, result: Any,
+    *, request_id: str, execution_id: str, user_id: str, thread_id: str, result: Any,
     runtime: SecureAgentRuntime, include_tool_trace: bool = True,
 ) -> ChatResponse:
     tool_trace = list(getattr(result, "tool_trace", []) or [])
     return ChatResponse(
         request_id=request_id,
+        execution_id=execution_id,
         user_id=user_id,
         thread_id=thread_id,
         execution_status="completed",
@@ -248,6 +350,7 @@ def _to_response(
 def _pending_response(
     *,
     request_id: str,
+    execution_id: str,
     user_id: str,
     thread_id: str,
     runtime: SecureAgentRuntime,
@@ -257,6 +360,7 @@ def _pending_response(
 
     return ChatResponse(
         request_id=request_id,
+        execution_id=execution_id,
         user_id=user_id,
         thread_id=thread_id,
         execution_status="pending_approval",
@@ -281,13 +385,45 @@ def _pending_response(
     )
 
 
+def _cancelled_response(
+    *, request_id: str, execution_id: str, user_id: str, thread_id: str,
+    runtime: SecureAgentRuntime,
+) -> ChatResponse:
+    return ChatResponse(
+        request_id=request_id,
+        execution_id=execution_id,
+        user_id=user_id,
+        thread_id=thread_id,
+        execution_status="cancelled",
+        answer="本次 Agent 执行已取消。",
+        stats=AgentExecutionStats(
+            llm_calls=0, tool_calls=0, summary_calls=0,
+            summary_updated=False, stopped_by_max_steps=False, latency_ms=0.0,
+        ),
+        tool_trace=[],
+        runtime_trace=RuntimeTrace(
+            context_pipeline={}, memory_trace={},
+            loaded_skills=list(runtime.get_loaded_skill_ids()),
+            model_trace=[], tool_trace=[],
+        ),
+        pending_approval=None,
+    )
+
+
 def _execute(
     *, api_runtime: AgentApiRuntime, question: str, thread_id: str,
-    user_id: str, include_tool_trace: bool = True,
+    user_id: str, execution_id: str, include_tool_trace: bool = True,
     event_callback: RuntimeEventCallback | None = None,
 ) -> ChatResponse:
     request_id = create_request_id()
-    logger.info("Agent request started. request_id=%s user_id=%s thread_id=%s", request_id, user_id, thread_id)
+    execution_store = api_runtime.runtime.conversation_event_store
+    execution_store.start_execution(
+        execution_id=execution_id, user_id=user_id, thread_id=thread_id,
+    )
+    logger.info(
+        "Agent request started. request_id=%s execution_id=%s user_id=%s thread_id=%s",
+        request_id, execution_id, user_id, thread_id,
+    )
     try:
         with bind_runtime_event_callback(event_callback, thread_id=thread_id):
             emit_runtime_event(
@@ -303,17 +439,93 @@ def _execute(
                     question, thread_id=thread_id, user_id=user_id
                 )
                 pending = api_runtime.runtime.get_pending_approval(thread_id)
+    except AgentExecutionCancelled:
+        checkpoint_cleanup_error = ""
+        try:
+            # 中断批准后的 graph.invoke 若在 Tool 内被取消，LangGraph 会保留
+            # 执行前的 interrupt checkpoint。内部补一次 REJECT，用合法的
+            # ToolMessage 消费旧 Tool Call，而不是删除整个 thread checkpoint。
+            with api_runtime.lock_for(thread_id):
+                stale_pending = api_runtime.runtime.get_pending_approval(thread_id)
+                if stale_pending is not None:
+                    api_runtime.runtime.run(
+                        "/reject", thread_id=thread_id, user_id=user_id,
+                    )
+                if api_runtime.runtime.get_pending_approval(thread_id) is not None:
+                    raise RuntimeError("取消后 HITL interrupt 仍未清理。")
+        except Exception as cleanup_error:
+            checkpoint_cleanup_error = str(cleanup_error)
+            logger.exception(
+                "Cancelled execution checkpoint cleanup failed. "
+                "execution_id=%s thread_id=%s",
+                execution_id, thread_id,
+            )
+
+        execution_store.update_execution(
+            execution_id,
+            status="CANCELLED",
+            current_step=(
+                "cancelled"
+                if not checkpoint_cleanup_error
+                else "cancelled_checkpoint_cleanup_failed"
+            ),
+            error_message=checkpoint_cleanup_error,
+        )
+        execution_store.append_next_execution_event(
+            execution_id=execution_id,
+            event_type=(
+                "cancel_checkpoint_resolved"
+                if not checkpoint_cleanup_error
+                else "cancel_checkpoint_cleanup_failed"
+            ),
+            payload={
+                "execution_id": execution_id,
+                "thread_id": thread_id,
+                "user_id": user_id,
+                "message": (
+                    "取消后残留的 HITL checkpoint 已通过内部拒绝完成收尾。"
+                    if not checkpoint_cleanup_error
+                    else "取消完成，但 HITL checkpoint 自动收尾失败。"
+                ),
+                "error": checkpoint_cleanup_error,
+            },
+        )
+        execution_store.append_next_execution_event(
+            execution_id=execution_id,
+            event_type="execution_cancelled",
+            payload={
+                "execution_id": execution_id,
+                "thread_id": thread_id,
+                "user_id": user_id,
+                "message": "Agent 已响应用户取消请求并停止执行。",
+            },
+        )
+        logger.info(
+            "Agent request cancelled. request_id=%s execution_id=%s thread_id=%s",
+            request_id, execution_id, thread_id,
+        )
+        return _cancelled_response(
+            request_id=request_id,
+            execution_id=execution_id,
+            user_id=user_id,
+            thread_id=thread_id,
+            runtime=api_runtime.runtime,
+        )
     except RuntimeError as error:
         if "聊天模型返回了空答案" in str(error):
             with api_runtime.lock_for(thread_id):
                 pending = api_runtime.runtime.get_pending_approval(thread_id)
             if pending is not None:
+                execution_store.update_execution(
+                    execution_id, status="WAITING_HITL", current_step="hitl_interrupt",
+                )
                 logger.info(
                     "Agent request paused for approval. request_id=%s user_id=%s thread_id=%s",
                     request_id, user_id, thread_id,
                 )
                 return _pending_response(
                     request_id=request_id,
+                    execution_id=execution_id,
                     user_id=user_id,
                     thread_id=thread_id,
                     runtime=api_runtime.runtime,
@@ -324,33 +536,61 @@ def _execute(
                 "Agent request conflicted. request_id=%s user_id=%s thread_id=%s error=%s",
                 request_id, user_id, thread_id, error,
             )
+            execution_store.update_execution(
+                execution_id, status="FAILED", current_step="runtime_conflict",
+                error_message=str(error),
+            )
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
-                detail={"message": str(error), "request_id": request_id},
+                detail={
+                    "message": str(error), "request_id": request_id,
+                    "execution_id": execution_id,
+                },
             ) from error
+        execution_store.update_execution(
+            execution_id, status="FAILED", current_step="runtime_failed",
+            error_message=str(error),
+        )
         logger.exception("Agent request failed. request_id=%s user_id=%s thread_id=%s", request_id, user_id, thread_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Agent 执行失败。", "request_id": request_id},
+            detail={
+                "message": "Agent 执行失败。", "request_id": request_id,
+                "execution_id": execution_id,
+            },
         ) from error
     except Exception as error:
+        execution_store.update_execution(
+            execution_id, status="FAILED", current_step="runtime_failed",
+            error_message=str(error),
+        )
         logger.exception("Agent request failed. request_id=%s user_id=%s thread_id=%s", request_id, user_id, thread_id)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={"message": "Agent 执行失败。", "request_id": request_id},
+            detail={
+                "message": "Agent 执行失败。", "request_id": request_id,
+                "execution_id": execution_id,
+            },
         ) from error
     if pending is not None:
+        execution_store.update_execution(
+            execution_id, status="WAITING_HITL", current_step="hitl_interrupt",
+        )
         logger.info(
             "Agent request paused for approval. request_id=%s user_id=%s thread_id=%s",
             request_id, user_id, thread_id,
         )
         return _pending_response(
             request_id=request_id,
+            execution_id=execution_id,
             user_id=user_id,
             thread_id=thread_id,
             runtime=api_runtime.runtime,
             pending_approval=pending,
         )
+    execution_store.update_execution(
+        execution_id, status="SUCCEEDED", current_step="completed",
+    )
     logger.info(
         "Agent request completed. request_id=%s user_id=%s thread_id=%s latency_ms=%.2f llm_calls=%d tool_calls=%d",
         request_id, user_id, thread_id,
@@ -359,7 +599,8 @@ def _execute(
         int(getattr(result, "turn_tool_call_count", 0)),
     )
     return _to_response(
-        request_id=request_id, user_id=user_id, thread_id=thread_id,
+        request_id=request_id, execution_id=execution_id,
+        user_id=user_id, thread_id=thread_id,
         result=result, runtime=api_runtime.runtime,
         include_tool_trace=include_tool_trace,
     )
@@ -383,6 +624,7 @@ def _chat_event_stream(
     question: str,
     thread_id: str,
     user_id: str,
+    execution_id: str,
     include_tool_trace: bool,
 ) -> Iterator[str]:
     """在线程中执行同步 Agent，并将 FastAPI 可确认的外围状态映射为 SSE。
@@ -399,23 +641,88 @@ def _chat_event_stream(
     # Worker 使用 events.put(...) 放入结果；下面的 while 循环使用
     # events.get(...) 取出结果。Queue 自己不会监控 Agent。
     events: queue.Queue[tuple[str, dict[str, Any]]] = queue.Queue()
-    run_id = "run-" + uuid.uuid4().hex[:12]
     sequence_lock = threading.Lock()
-    sequence_no = 0
+    execution_store = api_runtime.runtime.conversation_event_store
+    sequence_no = execution_store.get_last_execution_event_sequence(execution_id)
+    cancellation_event = api_runtime.register_execution(execution_id)
+
+    persisted_execution_steps = {
+        "runtime_waiting",
+        "runtime_acquired",
+        "runtime_started",
+        "runtime_resumed",
+        "context_pipeline_started",
+        "context_pipeline_completed",
+        "model_started",
+        "model_completed",
+        "graph_started",
+        "graph_completed",
+        "tools_started",
+        "tools_completed",
+        "tools_failed",
+        "hitl_requested",
+        "runtime_blocked",
+        "hitl_resume_started",
+        "hitl_resume_completed",
+        "context_pipeline_failed",
+        "model_failed",
+    }
 
     def publish(event: str, data: dict[str, Any]) -> None:
         """给内部事件附加运行身份与严格递增序号后写入本请求 Queue。"""
 
         nonlocal sequence_no
+        # emit_runtime_event 可能通过 thread_id 路由到新的 Tool 工作线程。
+        # 在该线程执行回调时重新绑定 execution_id，随后工具启动的外部
+        # 流水线即可登记到正确执行，避免多会话之间互相取消。
+        set_current_execution_id(execution_id)
+        if event in persisted_execution_steps and cancellation_event.is_set():
+            raise AgentExecutionCancelled()
         with sequence_lock:
             sequence_no += 1
             current_sequence = sequence_no
+        # execution 不只保存 RUNNING/终态，也保存最近到达的真实运行步骤。
+        # 页面刷新后虽然原 SSE 已断开，仍能展示后端最后确认的执行位置。
+        if event in persisted_execution_steps:
+            try:
+                execution_store.update_execution(
+                    execution_id,
+                    status="RUNNING",
+                    current_step=event,
+                )
+                # 取消请求可能恰好发生在上面的首次检查与状态写入之间。
+                # 再检查一次，防止并发事件把 CANCELLING 错误覆盖回 RUNNING。
+                if cancellation_event.is_set():
+                    execution_store.update_execution(
+                        execution_id,
+                        status="CANCELLING",
+                        current_step="cancellation_requested",
+                    )
+                    raise AgentExecutionCancelled()
+                execution_store.append_execution_event(
+                    execution_id=execution_id,
+                    sequence_no=current_sequence,
+                    event_type=event,
+                    payload={
+                        **data,
+                        "execution_id": execution_id,
+                        "thread_id": thread_id,
+                        "sequence_no": current_sequence,
+                    },
+                )
+            except (KeyError, ValueError):
+                logger.debug(
+                    "Execution step was not persisted. execution_id=%s event=%s",
+                    execution_id,
+                    event,
+                    exc_info=True,
+                )
         events.put(
             (
                 event,
                 {
                     **data,
-                    "run_id": run_id,
+                    "execution_id": execution_id,
                     "thread_id": thread_id,
                     "sequence_no": current_sequence,
                 },
@@ -435,6 +742,7 @@ def _chat_event_stream(
                 thread_id=thread_id,
                 user_id=user_id,
                 include_tool_trace=include_tool_trace,
+                execution_id=execution_id,
                 event_callback=publish,
             )
             body = result.model_dump(mode="json")
@@ -443,13 +751,13 @@ def _chat_event_stream(
             # 产生的实时事件。当前阶段只在执行完成后把它单独推给页面。
             tool_trace = body.get("runtime_trace", {}).get("tool_trace", [])
             if tool_trace:
-                events.put(("tool_trace", {"tools": tool_trace}))
+                publish("tool_trace", {"tools": tool_trace})
 
             # pending_approval 来自最新 LangGraph Checkpoint。如果执行停在
             # interrupt()，先通知页面显示批准/拒绝卡片，再发送完整结果。
             if body.get("pending_approval") is not None:
-                events.put(("pending_approval", body["pending_approval"]))
-            events.put(("result", body))
+                publish("pending_approval", body["pending_approval"])
+            publish("result", body)
         except HTTPException as error:
             # StreamingResponse 开始发送后，已经不能再把响应整体改成普通
             # 409/500 JSON，因此把错误转换成 SSE 的 error 事件交给前端。
@@ -459,14 +767,16 @@ def _chat_event_stream(
                 if isinstance(detail, dict)
                 else str(detail)
             )
-            events.put(("error", {"status_code": error.status_code, "message": message}))
+            publish("error", {"status_code": error.status_code, "message": message})
         except Exception:
             logger.exception("Streaming Agent request failed. thread_id=%s", thread_id)
-            events.put(("error", {"status_code": 500, "message": "Agent 执行失败。"}))
+            publish("error", {"status_code": 500, "message": "Agent 执行失败。"})
         finally:
             # done 是内部的“流结束标记”。无论成功还是失败都必须放入，
             # 否则 SSE 循环会一直等待，浏览器连接也不会正常结束。
-            events.put(("done", {}))
+            publish("done", {})
+            api_runtime.finish_execution(execution_id)
+            finish_execution_context(execution_id)
 
     # SSE 生成器负责网络输出，Worker 负责阻塞式 Agent 执行。
     # daemon=True 表示应用退出时不会因为这个后台线程阻止进程结束。
@@ -482,11 +792,11 @@ def _chat_event_stream(
     # yield 与 return 不同：发送数据后函数暂停，但不会结束。
     yield _sse_event(
         "accepted",
-        {"run_id": run_id, "thread_id": thread_id, "message": "请求已接收。"},
+        {"execution_id": execution_id, "thread_id": thread_id, "message": "请求已接收。"},
     )
     yield _sse_event(
         "status",
-        {"run_id": run_id, "thread_id": thread_id, "message": "正在执行 Agent…"},
+        {"execution_id": execution_id, "thread_id": thread_id, "message": "正在执行 Agent…"},
     )
 
     while True:
@@ -500,7 +810,7 @@ def _chat_event_stream(
             yield _sse_event(
                 "heartbeat",
                 {
-                    "run_id": run_id,
+                    "execution_id": execution_id,
                     "thread_id": thread_id,
                     "elapsed_seconds": round(time.monotonic() - started_at, 1),
                     "message": "Agent 仍在执行，正在等待模型或工具返回…",
@@ -557,6 +867,137 @@ def runtime_status(request: Request) -> RuntimeStatusResponse:
         status="ready",
         active_tools=list(runtime.get_active_tool_names()),
         loaded_skills=list(runtime.get_loaded_skill_ids()),
+    )
+
+
+@app.get(
+    "/api/v1/executions/{execution_id}",
+    response_model=AgentExecutionResponse,
+    tags=["agent"],
+)
+def get_execution_status(
+    execution_id: str,
+    request: Request,
+    user_id: str = "local-user",
+) -> AgentExecutionResponse:
+    """读取一次完整 Agent 执行的持久化状态。"""
+
+    try:
+        execution_id = normalize_text(execution_id, field_name="execution_id")
+        user_id = normalize_text(user_id, field_name="user_id")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    execution = get_conversation_store(request).get_execution(execution_id)
+    if execution is None or execution.user_id != user_id:
+        raise HTTPException(status_code=404, detail="执行不存在或不属于当前用户。")
+    return AgentExecutionResponse(**execution.__dict__)
+
+
+@app.post(
+    "/api/v1/executions/{execution_id}/cancel",
+    response_model=AgentExecutionResponse,
+    tags=["agent"],
+)
+def cancel_execution(
+    execution_id: str,
+    request: Request,
+    user_id: str = "local-user",
+) -> AgentExecutionResponse:
+    """请求协作式取消；不会危险地强制终止 Python Worker 线程。"""
+
+    try:
+        execution_id = normalize_text(execution_id, field_name="execution_id")
+        user_id = normalize_text(user_id, field_name="user_id")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    api_runtime = get_runtime(request)
+    store = get_conversation_store(request)
+    execution = store.get_execution(execution_id)
+    if execution is None or execution.user_id != user_id:
+        raise HTTPException(status_code=404, detail="执行不存在或不属于当前用户。")
+    if execution.status == "CANCELLING":
+        return AgentExecutionResponse(**execution.__dict__)
+    if execution.status != "RUNNING":
+        raise HTTPException(status_code=409, detail="只有 RUNNING 执行可以取消。")
+    if not api_runtime.request_cancellation(execution_id):
+        raise HTTPException(status_code=409, detail="执行已经结束或不在当前进程中。")
+    store.append_next_execution_event(
+        execution_id=execution_id,
+        event_type="user_cancellation_requested",
+        payload={
+            "execution_id": execution_id,
+            "thread_id": execution.thread_id,
+            "user_id": user_id,
+            "message": "用户主动请求取消本次 Agent 执行。",
+        },
+    )
+    terminate_execution_subprocess(execution_id)
+    execution = store.update_execution(
+        execution_id,
+        status="CANCELLING",
+        current_step="cancellation_requested",
+    )
+    return AgentExecutionResponse(**execution.__dict__)
+
+
+@app.get(
+    "/api/v1/executions/{execution_id}/events",
+    response_model=AgentExecutionEventListResponse,
+    tags=["agent"],
+)
+def get_execution_events(
+    execution_id: str,
+    request: Request,
+    user_id: str = "local-user",
+    after_sequence: int = 0,
+) -> AgentExecutionEventListResponse:
+    """按严格递增序号读取事件，供刷新后的页面断点续读。"""
+
+    try:
+        execution_id = normalize_text(execution_id, field_name="execution_id")
+        user_id = normalize_text(user_id, field_name="user_id")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    store = get_conversation_store(request)
+    execution = store.get_execution(execution_id)
+    if execution is None or execution.user_id != user_id:
+        raise HTTPException(status_code=404, detail="执行不存在或不属于当前用户。")
+    events = store.list_execution_events(
+        execution_id=execution_id,
+        after_sequence=after_sequence,
+    )
+    return AgentExecutionEventListResponse(
+        execution_id=execution_id,
+        events=[AgentExecutionEventResponse(**event.__dict__) for event in events],
+    )
+
+
+@app.get(
+    "/api/v1/threads/{thread_id}/executions/active",
+    response_model=ActiveExecutionResponse,
+    tags=["agent"],
+)
+def get_active_execution_status(
+    thread_id: str,
+    request: Request,
+    user_id: str = "local-user",
+) -> ActiveExecutionResponse:
+    """供页面刷新后恢复当前线程的运行或 HITL 等待状态。"""
+
+    try:
+        thread_id = normalize_text(thread_id, field_name="thread_id")
+        user_id = normalize_text(user_id, field_name="user_id")
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
+    store = get_conversation_store(request)
+    if store.get_thread(user_id=user_id, thread_id=thread_id) is None:
+        raise HTTPException(status_code=404, detail="会话不存在或不属于当前用户。")
+    execution = store.get_active_execution(thread_id=thread_id)
+    if execution is not None and execution.user_id != user_id:
+        execution = None
+    return ActiveExecutionResponse(
+        thread_id=thread_id,
+        execution=(AgentExecutionResponse(**execution.__dict__) if execution else None),
     )
 
 
@@ -702,9 +1143,17 @@ def chat(payload: ChatRequest, request: Request) -> ChatResponse:
         user_id=user_id,
         thread_id=thread_id,
     )
+    execution_id = resolve_execution_id(
+        store=get_conversation_store(request),
+        user_id=user_id,
+        thread_id=thread_id,
+        requested_execution_id=payload.execution_id,
+        is_resume=question in {"/approve", "/reject"},
+    )
     return _execute(
         api_runtime=get_runtime(request), question=question,
         thread_id=thread_id, user_id=user_id,
+        execution_id=execution_id,
         include_tool_trace=payload.include_tool_trace,
     )
 
@@ -728,6 +1177,13 @@ def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
         user_id=user_id,
         thread_id=thread_id,
     )
+    execution_id = resolve_execution_id(
+        store=get_conversation_store(request),
+        user_id=user_id,
+        thread_id=thread_id,
+        requested_execution_id=payload.execution_id,
+        is_resume=question in {"/approve", "/reject"},
+    )
     # 普通接口会等待 _execute() 完成后返回一个 JSON；这里把生成器交给
     # StreamingResponse。FastAPI 每从生成器取得一段 yield 数据，就立即
     # 尝试写给浏览器，因此一次请求可以收到多条事件。
@@ -737,6 +1193,7 @@ def chat_stream(payload: ChatRequest, request: Request) -> StreamingResponse:
             question=question,
             thread_id=thread_id,
             user_id=user_id,
+            execution_id=execution_id,
             include_tool_trace=payload.include_tool_trace,
         ),
         media_type="text/event-stream",
@@ -757,9 +1214,18 @@ def _hitl_decision(
         user_id = normalize_text(payload.user_id, field_name="user_id")
     except ValueError as error:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(error)) from error
+    store = get_conversation_store(request)
+    store.ensure_thread(user_id=user_id, thread_id=thread_id)
+    execution_id = resolve_execution_id(
+        store=store,
+        user_id=user_id,
+        thread_id=thread_id,
+        requested_execution_id=payload.execution_id,
+        is_resume=True,
+    )
     return _execute(
         api_runtime=get_runtime(request), question=command,
-        thread_id=thread_id, user_id=user_id,
+        thread_id=thread_id, user_id=user_id, execution_id=execution_id,
     )
 
 
@@ -791,4 +1257,70 @@ def pending_approval(thread_id: str, request: Request) -> PendingApprovalRespons
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="HITL pending 状态查询失败。",
         ) from error
-    return PendingApprovalResponse(thread_id=thread_id, pending_approval=pending)
+    store = get_conversation_store(request)
+    active = store.get_active_execution(thread_id=thread_id)
+    latest = store.get_latest_execution(thread_id=thread_id)
+
+    # 兼容旧版本已经形成的“execution 已取消，但 checkpoint interrupt
+    # 仍残留”会话。首次 pending 查询时执行一次延迟收尾，使旧 thread
+    # 也能恢复普通对话，而不是永久被 Pending HITL Guard 拦截。
+    if (
+        pending is not None
+        and active is None
+        and latest is not None
+        and latest.status == "CANCELLED"
+        and latest.current_step == "cancelled"
+    ):
+        try:
+            with api_runtime.lock_for(thread_id):
+                api_runtime.runtime.run(
+                    "/reject", thread_id=thread_id, user_id=latest.user_id,
+                )
+                pending = api_runtime.runtime.get_pending_approval(thread_id)
+            if pending is not None:
+                raise RuntimeError("延迟收尾后 HITL interrupt 仍然存在。")
+            store.append_next_execution_event(
+                execution_id=latest.execution_id,
+                event_type="cancel_checkpoint_resolved_late",
+                payload={
+                    "execution_id": latest.execution_id,
+                    "thread_id": thread_id,
+                    "user_id": latest.user_id,
+                    "message": "已自动清理旧版本取消执行残留的 HITL checkpoint。",
+                },
+            )
+        except Exception as cleanup_error:
+            logger.exception(
+                "Legacy cancelled checkpoint cleanup failed. thread_id=%s",
+                thread_id,
+            )
+            latest = store.update_execution(
+                latest.execution_id,
+                status="CANCELLED",
+                current_step="cancelled_checkpoint_cleanup_failed",
+                error_message=str(cleanup_error),
+            )
+
+    # Checkpoint 中的 interrupt 可能在“批准后运行期间”或“运行被取消后”
+    # 暂时仍然存在。只有执行记录明确处于 WAITING_HITL 时，它才仍是可
+    # 操作审批。没有 execution 记录时保留旧 CLI checkpoint 的兼容行为。
+    if pending is not None and latest is not None:
+        if active is not None:
+            # 批准后的 RUNNING/CANCELLING 阶段可能仍看到旧 checkpoint，
+            # 但它已经不是可再次操作的审批。
+            if active.status != "WAITING_HITL":
+                pending = None
+        elif latest.status == "SUCCEEDED":
+            pending = None
+        elif latest.status == "CANCELLED" and latest.current_step == "cancelled":
+            pending = None
+    return PendingApprovalResponse(
+        thread_id=thread_id,
+        execution_id=(
+            active.execution_id
+            if pending is not None and active is not None
+            and active.status == "WAITING_HITL"
+            else None
+        ),
+        pending_approval=pending,
+    )
