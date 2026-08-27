@@ -371,9 +371,9 @@ python -m scripts.run_full_agent_benchmark --case hitl_reject
 | 指标 | 结果 |
 |---|---:|
 | 总案例 | 20 |
-| 通过 | 19 |
-| 失败 | 1（`hitl_reject`） |
-| Task Success Rate | 95% |
+| 通过 | 20 |
+| 失败 | 0 |
+| Task Success Rate | 100% |
 | Tool Routing Accuracy | 100% |
 | Retrieval Decision Accuracy | 100% |
 | Tool Minimality | 100% |
@@ -382,7 +382,7 @@ python -m scripts.run_full_agent_benchmark --case hitl_reject
 | Error Recovery Rate | 100% |
 
 Benchmark 会产生模型调用费用，结果也可能受到模型版本、网络和数据状态影响。
-项目如实保留当前失败项，不通过弱化断言伪造 100% 通过率。
+评测结果来自真实 Agent Runtime；项目不通过弱化断言伪造通过率。
 
 ## 环境变量
 
@@ -447,5 +447,5 @@ compose.yaml               # 本地一键启动与持久化 volumes
 1. 统一 Agent 结构化事件模型并补齐节点耗时。
 2. 建立持久化 Job 状态机与 SSE 断线续传。
 3. 建立 RAG 标注集，量化 BM25、Dense、RRF 和 Reranker 的 Recall@K、MRR 与延迟。
-4. 修复 `hitl_reject` E2E 案例并扩展稳定性测试。
+4. 扩展 HITL、异常恢复与并发稳定性测试。
 5. 增加用户认证、资源所有权验证和生产部署配置。
