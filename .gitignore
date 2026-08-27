@@ -59,6 +59,9 @@ PHASE*_BENCHMARK_CORRECTION.md
 *.png
 *.jpg
 *.jpeg
+!docs/images/*.png
+!docs/images/*.jpg
+!docs/images/*.jpeg
 
 # Local design/audit notes that contain machine-specific paths
 raglab_e2e_data_inventory.md
