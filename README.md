@@ -348,13 +348,14 @@ python -m pytest tests/test_api.py -q -p no:cacheprovider
 HITL pending 查询与恢复、会话级锁、Agent 错误映射和删除流程。
 
 GitHub Actions 会在 `push` 和 `pull_request` 时使用 Python 3.11 与 CPU-only
-PyTorch 运行上述测试。
+PyTorch 执行源码检查和 40 项 FastAPI 自动化测试，并在测试通过后验证 Docker
+镜像能够完整构建。
 
 ## Agent Benchmark
 
-完整 E2E Benchmark 会调用真实 LLM，并基于真实 Agent Runtime 检查 Tool Routing、
-Retrieval Decision、Tool Minimality、Memory Recall、HITL Compliance、Error Recovery、
-线程隔离、上下文预算和持久化行为。
+完整 E2E Benchmark 会调用真实 LLM，并基于真实 Agent Runtime 检查工具路由、
+检索决策、工具调用精简度、记忆召回、人工审批合规性、错误恢复、线程隔离、
+上下文预算和持久化行为。
 
 ```powershell
 python -m scripts.run_full_agent_benchmark
@@ -373,13 +374,13 @@ python -m scripts.run_full_agent_benchmark --case hitl_reject
 | 总案例 | 20 |
 | 通过 | 20 |
 | 失败 | 0 |
-| Task Success Rate | 100% |
-| Tool Routing Accuracy | 100% |
-| Retrieval Decision Accuracy | 100% |
-| Tool Minimality | 100% |
-| Memory Recall Accuracy | 100% |
-| HITL Compliance | 100% |
-| Error Recovery Rate | 100% |
+| 任务完成率（Task Success Rate） | 100% |
+| 工具路由准确率（Tool Routing Accuracy） | 100% |
+| 检索决策准确率（Retrieval Decision Accuracy） | 100% |
+| 工具最简调用率（Tool Minimality） | 100% |
+| 记忆召回准确率（Memory Recall Accuracy） | 100% |
+| 人工审批合规率（HITL Compliance） | 100% |
+| 错误恢复成功率（Error Recovery Rate） | 100% |
 
 Benchmark 会产生模型调用费用，结果也可能受到模型版本、网络和数据状态影响。
 评测结果来自真实 Agent Runtime；项目不通过弱化断言伪造通过率。
