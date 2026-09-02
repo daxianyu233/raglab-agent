@@ -16,6 +16,19 @@ Tool Calling、动态 Skill、Memory、上下文预算、HITL 人工审批、安
 > 提供自己的 `DEEPSEEK_API_KEY`；仓库不会提供、上传或内置任何 API Key，也没有
 > 使用固定答案伪造无模型 Demo。
 
+> [!NOTE]
+> 这是一个面向求职与工程学习的个人项目，目前验证范围是本地单机运行、自动化测试
+> 和真实模型 E2E Benchmark。项目实现了若干生产化机制，但**不声称承载过真实商业
+> 流量**。已实现能力、验证证据和上线前缺口见
+> [生产化能力与边界](docs/production-readiness.md)。
+
+面试或代码审阅建议从以下入口开始：
+
+- [源码回顾路线](docs/code-walkthrough.md)：一次请求如何经过 API、Agent、Tool、HITL 与持久化。
+- [关键技术决策](docs/engineering-decisions.md)：为什么这样设计，以及替代方案和代价。
+- [生产化能力与边界](docs/production-readiness.md)：已实现、如何验证、仍缺什么。
+- [最近一次 Agent Benchmark](reports/full_agent_e2e_report.json)：20 个案例的原始报告。
+
 ## 项目定位
 
 RAGLab Agent 面向以下场景：
@@ -348,8 +361,13 @@ python -m pytest tests/test_api.py -q -p no:cacheprovider
 HITL pending 查询与恢复、会话级锁、Agent 错误映射和删除流程。
 
 GitHub Actions 会在 `push` 和 `pull_request` 时使用 Python 3.11 与 CPU-only
-PyTorch 执行源码检查和 40 项 FastAPI 自动化测试，并在测试通过后验证 Docker
-镜像能够完整构建。
+PyTorch 执行源码检查和 FastAPI 契约测试，并在测试通过后验证 Docker 镜像能够
+完整构建。测试用例的当前收集数量以 CI 日志为准，本地可用下面的命令核对，避免把
+测试函数数与参数化后的测试用例数混为一谈：
+
+```powershell
+python -m pytest tests/test_api.py --collect-only -q -p no:cacheprovider
+```
 
 ## Agent Benchmark
 
@@ -401,22 +419,29 @@ Benchmark 会产生模型调用费用，结果也可能受到模型版本、网�
 
 ```text
 raglab/
-├── agent/                 # LangGraph Agent 与长期记忆 Agent
+├── agent/                 # LangGraph Agent、上下文、记忆与 Tool Policy
 ├── api/                   # FastAPI、SSE、静态 Web UI
-├── context/               # Context Pipeline、预算、压缩、审计
-├── control/               # Runtime Security、Tool Policy、HITL
+├── application/           # Agent Runtime 组装入口
+├── control/               # HITL、运行时安全、外部副作用与补偿
+├── document_ingestion/    # 多模态文档节点准备与图片描述
+├── embeddings/            # Embedding 适配
 ├── evaluation/            # Agent、Context、Retrieval 评测实现与数据集
 ├── generation/            # LLM 与 RAG Chain
 ├── ingestion/             # PDF 加载与 Chunk 构建
 ├── intelligence/          # GitHub 技术情报采集、分析与查询
-├── memory/                # 会话事件、长期记忆与持久化适配
+├── multimodal_index/      # 文本/图像索引与融合检索
+├── multimodal_rag/        # 多模态 RAG 查询流程
+├── observability/         # 执行状态、事件与运行追踪
+├── persistence/           # LangGraph Checkpoint / Store 的 SQLite 后端
 ├── retrieval/             # BM25、Dense、Hybrid、Reranker
-└── tools/                 # Agent Tool 定义与执行入口
+├── scheduler/             # 调度状态机、Job 与运行记录
+└── vectorstores/          # 向量存储适配
 
 config/                    # Agent、检索、模型与情报任务配置
 skills/                    # 可动态发现和加载的 Skills
 scripts/                   # CLI、索引、采集、调度与 Benchmark 入口
 tests/                     # FastAPI 自动化测试
+docs/                      # 架构回顾、技术决策与生产化边界
 data/corpus/               # 示例 PDF 知识库
 Dockerfile                 # CPU-only Python 3.11 容器
 compose.yaml               # 本地一键启动与持久化 volumes
